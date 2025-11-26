@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# Environment
+.env
+.env.local
+
+# Database
+*.db
+*.db-journal
+players.db*
+pilkarze.db*
+sqlite_export.sql
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+backend_error.log
+
+# Temporary files
+tmp_*
+*.tmp
+*.bak
+*.backup_*

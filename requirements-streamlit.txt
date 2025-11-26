@@ -1,0 +1,12 @@
+# Streamlit Cloud Requirements
+# Minimalne zależności dla frontendu Streamlit
+
+streamlit==1.51.0
+pandas==2.3.3
+plotly==5.18.0
+requests==2.32.5
+numpy==2.3.5
+
+# Opcjonalnie (jeśli łączysz się bezpośrednio do bazy z frontendu)
+# psycopg2-binary==2.9.9
+# sqlalchemy==2.0.44
