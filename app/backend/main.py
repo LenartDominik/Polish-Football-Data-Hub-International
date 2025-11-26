@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from .database import engine, Base, SessionLocal
-from .routers import players, matches, comparison, matchlogs
-from .models import player, season_stats, live_match, player_live_stats
+from .routers import players, comparison, matchlogs
+from .models import player, season_stats
 from .models.player import Player
 from .models.competition_stats import CompetitionStats, CompetitionType
 from .models.goalkeeper_stats import GoalkeeperStats
@@ -939,10 +939,9 @@ app = FastAPI(
 )
 
 # Rejestracja routerów z prefixem /api
-app.include_router(players.router, prefix="/api")
-app.include_router(matches.router, prefix="/api")
-app.include_router(comparison.router, prefix="/api")
-app.include_router(matchlogs.router)  # Already has /api prefix in router
+app.include_router(players.router, prefix="/api")                                                                   
+app.include_router(comparison.router, prefix="/api")                                                                
+app.include_router(matchlogs.router, prefix="/api")
 
 @app.get("/", tags=["Root"])
 def root():

@@ -22,8 +22,7 @@ class Settings:
         
         # Ustawienia synchronizacji
         self.sync_daily_hour: int = int(os.getenv("SYNC_DAILY_HOUR", "6"))
-        self.sync_live_interval_minutes: int = int(os.getenv("SYNC_LIVE_INTERVAL_MINUTES", "5"))
-        
+
         # Timezone dla schedulera (domyślnie Europe/Warsaw)
         self.scheduler_timezone: str = os.getenv("SCHEDULER_TIMEZONE", "Europe/Warsaw")
 
