@@ -7,17 +7,16 @@ load_dotenv(override=False)
 
 class Settings:
     def __init__(self) -> None:
-        # Baza danych
-        # Dla Render.com: używaj /app/data/players.db (persistent disk)
-        # Lokalnie: używaj ./players.db
-        default_db = "sqlite:///./players.db"
-        
-        # Jeśli jesteśmy na Render (sprawdź czy katalog /app/data istnieje)
-        if os.path.exists("/app/data"):
-            default_db = "sqlite:////app/data/players.db"
-        
-        self.database_url: str = (
-            os.getenv("DATABASE_URL") or os.getenv("database_url") or default_db
+        # Baza danych - Supabase PostgreSQL (wymagane w .env)                                                       │
+        self.database_url: str = os.getenv("DATABASE_URL")
+
+        if not self.database_url:
+            raise ValueError(
+            "❌ DATABASE_URL not found in environment variables!\n"
+            "Please set DATABASE_URL in .env file.\n"
+            "Example:\n"
+            "  DATABASE_URL=postgresql://postgres.xxx:password@aws-1-eu-west-1.pooler.supabase.com:6543/postgres\n"
+            "See SUPABASE_GUIDE.md for setup instructions."
         )
         
         # Ustawienia synchronizacji
