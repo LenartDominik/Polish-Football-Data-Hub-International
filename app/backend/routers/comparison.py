@@ -130,10 +130,10 @@ SELECT
     SUM(gs.wins) AS wins,
     SUM(gs.draws) AS draws,
     SUM(gs.losses) AS losses,
-    SUM(gs.penalties_attempted) AS penalties_attempted,
-    SUM(gs.penalties_allowed) AS penalties_allowed,
-    SUM(gs.penalties_saved) AS penalties_saved,
-    SUM(gs.penalties_missed) AS penalties_missed
+    COALESCE(SUM(gs.penalties_attempted), 0) AS penalties_attempted,
+    COALESCE(SUM(gs.penalties_allowed), 0) AS penalties_allowed,
+    COALESCE(SUM(gs.penalties_saved), 0) AS penalties_saved,
+    COALESCE(SUM(gs.penalties_missed), 0) AS penalties_missed
 FROM players p
 INNER JOIN goalkeeper_stats gs ON p.id = gs.player_id
 WHERE p.id IN (:player1_id, :player2_id)
@@ -185,6 +185,10 @@ WHERE p.id IN (:player1_id, :player2_id)
         query += " GROUP BY p.id, p.name, p.position, p.team, p.league"
 
         df = pd.read_sql(text(query), db.bind, params=params)
+        
+        # Replace NaN with None for JSON serialization
+        import numpy as np
+        df = df.replace({np.nan: None})
 
         if df.empty or len(df) < 2:
             raise HTTPException(

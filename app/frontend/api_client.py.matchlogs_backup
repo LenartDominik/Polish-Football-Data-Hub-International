@@ -1,4 +1,4 @@
-"""API Client for Polish Players Tracker
+﻿"""API Client for Polish Players Tracker
 Handles all communication with the FastAPI backend.
 """
 import requests
@@ -34,17 +34,17 @@ class APIClient:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.ConnectionError:
-            st.error(f"? Cannot connect to API at {self.base_url}. Make sure the backend is running.")
-            st.info("?? Start backend with: `python -m uvicorn app.backend.main:app --reload`")
+            st.error(f"❌ Cannot connect to API at {self.base_url}. Make sure the backend is running.")
+            st.info("💡 Start backend with: `python -m uvicorn app.backend.main:app --reload`")
             return None
         except requests.exceptions.Timeout:
-            st.error(f"?? Request timeout after {self.timeout}s")
+            st.error(f"⏱️ Request timeout after {self.timeout}s")
             return None
         except requests.exceptions.HTTPError as e:
-            st.error(f"? API Error: {e.response.status_code} - {e.response.text}")
+            st.error(f"❌ API Error: {e.response.status_code} - {e.response.text}")
             return None
         except Exception as e:
-            st.error(f"? Unexpected error: {str(e)}")
+            st.error(f"❌ Unexpected error: {str(e)}")
             return None
     
     # ===== PLAYERS ENDPOINTS =====
@@ -139,7 +139,7 @@ class APIClient:
         if limit:
             params['limit'] = limit
         
-        data = self._make_request("GET", f"/api/matchlogs/{player_id}", params=params)
+        data = self._make_request("GET", f"/api/players/{player_id}/matches", params=params)
         if data is None:
             return pd.DataFrame()
         
@@ -161,4 +161,3 @@ def get_api_client() -> APIClient:
             api_url = "http://localhost:8000"
     
     return APIClient(api_url)
-

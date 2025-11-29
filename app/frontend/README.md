@@ -247,3 +247,4 @@ player2_is_gk = player2_data['is_goalkeeper']
 if player1_is_gk != player2_is_gk:
     st.error("⚠️ You cannot compare goalkeepers with field players!")
 ```
+

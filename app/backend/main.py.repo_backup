@@ -12,7 +12,6 @@ import logging
 import os
 import asyncio
 from datetime import datetime, date
-from sqlalchemy import extract
 from typing import Optional, List
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -562,19 +561,10 @@ async def sync_player_matchlogs(scraper: FBrefPlaywrightScraper, db, player: Pla
         
         logger.info(f"  📊 Found {len(match_logs)} matches")
         
-        # Parse season to get date range (e.g., 2025-2026 = July 1, 2025 to June 30, 2026)
-        from datetime import date
-        year_start = int(season.split('-')[0])
-        year_end = year_start + 1
-        season_start = date(year_start, 7, 1)
-        season_end = date(year_end, 6, 30)
-        
-        # Delete existing matches for this player and season only
+        # Delete existing matches for this player and season
         db.query(PlayerMatch).filter(
-            PlayerMatch.player_id == player.id,
-            PlayerMatch.match_date >= season_start,
-            PlayerMatch.match_date <= season_end
-        ).delete(synchronize_session='fetch')
+            PlayerMatch.player_id == player.id
+        ).delete()
         
         # Save matches
         saved_count = 0
@@ -643,106 +633,6 @@ async def sync_player_matchlogs(scraper: FBrefPlaywrightScraper, db, player: Pla
     except Exception as e:
         logger.error(f"  ❌ Error syncing match logs: {e}")
         db.rollback()
-        return 0
-
-
-
-
-def sync_competition_stats_from_matches(db, player_id: int) -> int:
-    """
-    Synchronize competition_stats from player_matches
-    Ensures both tables have consistent data
-    """
-    try:
-        from collections import defaultdict
-        
-        matches = db.query(PlayerMatch).filter(
-            PlayerMatch.player_id == player_id
-        ).all()
-        
-        if not matches:
-            return 0
-        
-        stats_dict = defaultdict(lambda: {
-            'games': 0, 'goals': 0, 'assists': 0, 'minutes': 0,
-            'xg': 0.0, 'xa': 0.0, 'games_starts': 0
-        })
-        
-        for match in matches:
-            year = match.match_date.year
-            month = match.match_date.month
-            
-            if month >= 7:
-                season = f"{year}-{year+1}"
-            else:
-                season = f"{year-1}-{year}"
-            
-            international_comps = ['WCQ', 'World Cup', 'UEFA Nations League', 
-                                   'UEFA Euro Qualifying', 'UEFA Euro', 
-                                   'Friendlies (M)', 'Copa América']
-            if match.competition in international_comps:
-                if 'WCQ' in match.competition or 'World Cup' in match.competition:
-                    if year in [2024, 2025, 2026]:
-                        season = '2026'
-                    elif year in [2021, 2022, 2023]:
-                        season = '2022'
-                    elif year in [2016, 2017, 2018]:
-                        season = '2018'
-                    else:
-                        season = str(year + 1) if month <= 6 else str(year)
-                else:
-                    season = str(year + 1) if month <= 6 else str(year)
-            
-            key = (season, match.competition)
-            stats_dict[key]['games'] += 1
-            stats_dict[key]['goals'] += match.goals or 0
-            stats_dict[key]['assists'] += match.assists or 0
-            stats_dict[key]['minutes'] += match.minutes_played or 0
-            stats_dict[key]['xg'] += match.xg or 0.0
-            stats_dict[key]['xa'] += match.xa or 0.0
-            stats_dict[key]['games_starts'] += 1 if (match.minutes_played or 0) > 45 else 0
-        
-        updated = 0
-        for (season, competition), stats in stats_dict.items():
-            record = db.query(CompetitionStats).filter(
-                CompetitionStats.player_id == player_id,
-                CompetitionStats.season == season,
-                CompetitionStats.competition_name == competition
-            ).first()
-            
-            comp_type = 'LEAGUE' if any(x in competition for x in ['Liga', 'League', 'Bundesliga', 'Premier', 'Serie A']) else 'CUP'
-            
-            if record:
-                record.games = stats['games']
-                record.goals = stats['goals']
-                record.assists = stats['assists']
-                record.minutes = stats['minutes']
-                record.xg = stats['xg']
-                record.xa = stats['xa']
-                record.games_starts = stats['games_starts']
-            else:
-                record = CompetitionStats(
-                    player_id=player_id,
-                    season=season,
-                    competition_name=competition,
-                    competition_type=comp_type,
-                    games=stats['games'],
-                    goals=stats['goals'],
-                    assists=stats['assists'],
-                    minutes=stats['minutes'],
-                    xg=stats['xg'],
-                    xa=stats['xa'],
-                    games_starts=stats['games_starts']
-                )
-                db.add(record)
-            
-            updated += 1
-        
-        db.commit()
-        return updated
-    
-    except Exception as e:
-        logger.error(f"Error syncing competition_stats: {e}")
         return 0
 
 
@@ -1087,7 +977,7 @@ def root():
             "health": "/health",
             "players": "/api/players",
             "comparison": "/api/comparison/compare",
-            "matchlogs": "/api/matchlogs"
+            "matchlogs": "/api/matchlogs/{player_id} (also: /api/matchlogs/{player_id}/stats, /api/matchlogs/match/{match_id})"
         },
         "scheduler": {
             "enabled": os.getenv("ENABLE_SCHEDULER", "false").lower() == "true",
@@ -1131,3 +1021,4 @@ def health_check():
         "timestamp": datetime.now().isoformat(),
         "scheduler_running": scheduler.running if scheduler else False
     }
+

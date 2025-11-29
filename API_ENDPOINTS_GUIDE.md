@@ -123,7 +123,7 @@ Statystyki bramkarskie (tylko dla bramkarzy)
 
 ### 📋 Matchlogs (NOWE w v0.6.0)
 
-#### `GET /api/players/{player_id}/matches`
+#### `GET /api/matchlogs/{player_id}`
 Wszystkie mecze gracza
 - **Path param:** `player_id` (int)
 - **Query params:**
@@ -163,7 +163,7 @@ GET /api/players/1/matches?season=2025-2026&limit=10
 ]
 ```
 
-#### `GET /api/players/{player_id}/matches/summary`
+#### `GET /api/matchlogs/{player_id}/summary`
 Podsumowanie statystyk z meczów
 - **Path param:** `player_id` (int)
 - **Query params:**
@@ -441,3 +441,4 @@ All player statistics in this API are sourced from **[FBref.com](https://fbref.c
 
 **Version:** 0.6.0  
 **Last Updated:** 2025-01-23 (FBref attribution added)
+

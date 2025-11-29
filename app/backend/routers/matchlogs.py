@@ -11,10 +11,10 @@ from ..models.player_match import PlayerMatch
 from ..models.player import Player
 
 
-router = APIRouter(prefix="/api/players", tags=["matchlogs"])
+router = APIRouter(prefix="/matchlogs", tags=["matchlogs"])
 
 
-@router.get("/{player_id}/matches")
+@router.get("/{player_id}")
 def get_player_matches(
     player_id: int,
     season: Optional[str] = Query(None, description="Filter by season (e.g., '2025-2026')"),
@@ -24,6 +24,11 @@ def get_player_matches(
 ):
     """
     Get match logs (detailed match statistics) for a specific player
+
+    **Endpoint:** GET /api/matchlogs/{player_id}
+    
+    This endpoint returns detailed match-by-match statistics for a player.
+    You can filter by season and competition, and limit the number of results.
     
     Parameters:
     - player_id: Player ID
@@ -44,10 +49,28 @@ def get_player_matches(
     
     # Apply filters
     if season:
-        # Filter by year in match_date (season 2025-2026 includes matches from 2025 and 2026)
+        # Filter by season dates (e.g., 2025-2026 = July 1, 2025 to June 30, 2026)
+        # For international matches (WCQ, Nations League, etc.), also include matches from the target year
+        from datetime import date
+        from sqlalchemy import or_, extract
         year_start = int(season.split('-')[0])
+        year_end = year_start + 1
+        season_start = date(year_start, 7, 1)
+        season_end = date(year_end, 6, 30)
+        
+        # International competitions that span multiple seasons
+        international_comps = ['WCQ', 'World Cup', 'UEFA Nations League', 'UEFA Euro Qualifying', 
+                               'UEFA Euro', 'Friendlies (M)', 'Copa América']
+        
+        # Club matches: date range, International matches: target year
         query = query.filter(
-            db.func.strftime('%Y', PlayerMatch.match_date).in_([str(year_start), str(year_start + 1)])
+            or_(
+                # Club matches within season dates
+                (PlayerMatch.match_date >= season_start) & (PlayerMatch.match_date <= season_end),
+                # International matches in target year
+                (PlayerMatch.competition.in_(international_comps)) & 
+                (extract('year', PlayerMatch.match_date).in_([year_start, year_end]))
+            )
         )
     
     if competition:
@@ -106,7 +129,7 @@ def get_player_matches(
     }
 
 
-@router.get("/{player_id}/matches/stats")
+@router.get("/{player_id}/stats")
 def get_player_match_stats_summary(
     player_id: int,
     season: Optional[str] = Query(None, description="Filter by season"),
@@ -115,6 +138,13 @@ def get_player_match_stats_summary(
 ):
     """
     Get aggregated match statistics for a player
+
+    **Endpoint:** GET /api/matchlogs/{player_id}/stats
+    
+    Returns summary statistics calculated from all match logs:
+    - Total matches, goals, assists, minutes
+    - Average performance metrics per match
+    - Filterable by season and competition
     
     Returns summary statistics calculated from matchlogs
     """
@@ -129,9 +159,28 @@ def get_player_match_stats_summary(
     # Apply filters
     if season:
         try:
+            # Filter by season dates (e.g., 2025-2026 = July 1, 2025 to June 30, 2026)
+            # For international matches, also include matches from the target year
+            from datetime import date
+            from sqlalchemy import or_, extract
             year_start = int(season.split('-')[0])
+            year_end = year_start + 1
+            season_start = date(year_start, 7, 1)
+            season_end = date(year_end, 6, 30)
+            
+            # International competitions that span multiple seasons
+            international_comps = ['WCQ', 'World Cup', 'UEFA Nations League', 'UEFA Euro Qualifying', 
+                                   'UEFA Euro', 'Friendlies (M)', 'Copa América']
+            
+            # Club matches: date range, International matches: target year
             query = query.filter(
-                db.func.strftime('%Y', PlayerMatch.match_date).in_([str(year_start), str(year_start + 1)])
+                or_(
+                    # Club matches within season dates
+                    (PlayerMatch.match_date >= season_start) & (PlayerMatch.match_date <= season_end),
+                    # International matches in target year
+                    (PlayerMatch.competition.in_(international_comps)) & 
+                    (extract('year', PlayerMatch.match_date).in_([year_start, year_end]))
+                )
             )
         except:
             # If season parsing fails, skip filter
@@ -191,10 +240,18 @@ def get_player_match_stats_summary(
     }
 
 
-@router.get("/matches/{match_id}")
+@router.get("/match/{match_id}")
 def get_match_details(match_id: int, db: Session = Depends(get_db)):
     """
     Get detailed statistics for a specific match
+
+    **Endpoint:** GET /api/matchlogs/match/{match_id}
+    
+    Returns comprehensive performance data for a single match including:
+    - Match information (date, competition, opponent, result)
+    - Performance (goals, assists, minutes)
+    - Shooting, passing, defense, possession statistics
+    - Discipline (fouls, cards)
     
     Parameters:
     - match_id: Match ID
@@ -259,3 +316,6 @@ def get_match_details(match_id: int, db: Session = Depends(get_db)):
             "red_cards": match.red_cards
         }
     }
+
+
+

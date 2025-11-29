@@ -60,8 +60,9 @@ def format_value(value, stat_name):
     """
     # Stats where 0 is a valid value
     valid_zero_stats = ['goals', 'assists', 'yellow_cards', 'red_cards', 'losses', 
-                        'penalties_missed', 'penalties_allowed', 'goals_against', 
-                        'matches', 'games_starts']
+                        'penalties_missed', 'penalties_allowed', 'penalties_saved', 
+                        'penalties_attempted', 'goals_against', 'matches', 'games_starts',
+                        'clean_sheets', 'clean_sheet_percentage', 'saves', 'wins', 'draws']
     
     # Check if value is None or 0
     if value is None or (isinstance(value, (int, float)) and value == 0):

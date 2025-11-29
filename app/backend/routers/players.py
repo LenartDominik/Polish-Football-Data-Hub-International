@@ -98,7 +98,6 @@ def get_all_goalkeeper_stats(db: Session = Depends(get_db)):
                 "penalties_allowed": s.penalties_allowed,
                 "penalties_saved": s.penalties_saved,
                 "penalties_missed": s.penalties_missed,
-                "post_shot_xg": s.post_shot_xg,
             }
             for s in stats
         ]

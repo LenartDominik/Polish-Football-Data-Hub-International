@@ -10,6 +10,7 @@ import logging
 
 sys.path.append('.')
 
+from sqlalchemy import text
 from app.backend.database import SessionLocal
 from app.backend.models.player import Player
 from app.backend.models.competition_stats import CompetitionStats, CompetitionType
@@ -22,6 +23,21 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+def reset_sequences_if_needed(db):
+    """Reset PostgreSQL sequences to avoid ID conflicts after bulk deletes"""
+    try:
+        # Only run for PostgreSQL databases
+        db_url = str(db.bind.url)
+        if 'postgresql' in db_url or 'postgres' in db_url:
+            logger.debug("🔧 Resetting PostgreSQL sequences...")
+            db.execute(text("SELECT setval('competition_stats_id_seq', (SELECT COALESCE(MAX(id), 1) FROM competition_stats));"))
+            db.execute(text("SELECT setval('goalkeeper_stats_id_seq', (SELECT COALESCE(MAX(id), 1) FROM goalkeeper_stats));"))
+            db.commit()
+            logger.debug("✅ Sequences reset successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not reset sequences (may not be PostgreSQL): {e}")
 
 
 def get_competition_type(competition_name: str) -> str:
@@ -89,6 +105,10 @@ def save_competition_stats(db, player: Player, stats_list: List[dict], current_s
         db.query(GoalkeeperStats).filter(
             GoalkeeperStats.player_id == player.id
         ).delete()
+        db.flush()  # Flush to clear session and avoid ID conflicts
+        
+        # Reset sequences for PostgreSQL to prevent ID conflicts
+        reset_sequences_if_needed(db)
     else:
         # Filter for current season stats only
         current_stats = [s for s in stats_list if s.get('season') == current_season]
@@ -113,6 +133,10 @@ def save_competition_stats(db, player: Player, stats_list: List[dict], current_s
             GoalkeeperStats.player_id == player.id,
             GoalkeeperStats.season == current_season
         ).delete()
+        db.flush()  # Flush to clear session and avoid ID conflicts
+        
+        # Reset sequences for PostgreSQL to prevent ID conflicts
+        reset_sequences_if_needed(db)
     
     # Deduplicate stats by season/competition combination
     seen = set()

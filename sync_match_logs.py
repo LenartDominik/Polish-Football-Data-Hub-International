@@ -1,4 +1,4 @@
-"""
+﻿"""
 Sync match logs (detailed match statistics) for players
 Usage: python sync_match_logs.py "Player Name" [--season YYYY-YYYY]
 """
@@ -55,10 +55,20 @@ async def sync_player_matches(scraper: FBrefPlaywrightScraper, db, player: Playe
         logger.warning(f"⚠️ No match logs found for {season}")
         return 0
     logger.info(f"📊 Found {len(match_logs)} matches")
-    # Delete existing matches for this season
+    
+    # Parse season to get date range (e.g., 2025-2026 = July 1, 2025 to June 30, 2026)
+    from datetime import date
+    year_start = int(season.split('-')[0])
+    year_end = year_start + 1
+    season_start = date(year_start, 7, 1)
+    season_end = date(year_end, 6, 30)
+    
+    # Delete existing matches for this season only
     db.query(PlayerMatch).filter(
-        PlayerMatch.player_id == player['id']
-    ).delete()
+        PlayerMatch.player_id == player['id'],
+        PlayerMatch.match_date >= season_start,
+        PlayerMatch.match_date <= season_end
+    ).delete(synchronize_session='fetch')
     # Save matches
     saved_count = 0
     for match_data in match_logs:

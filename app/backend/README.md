@@ -148,7 +148,7 @@ Pobiera nadchodzące mecze dla konkretnej ligi.
 
 ### 📋 Matchlogs (Szczegóły meczów)
 
-#### `GET /api/players/{player_id}/matches`
+#### `GET /api/matchlogs/{player_id}`
 Pobiera szczegółowe statystyki z meczów dla gracza.
 
 **Parametry:**
@@ -183,7 +183,7 @@ Invoke-RestMethod "http://127.0.0.1:8000/api/players/1/matches?season=2025-2026"
 }
 ```
 
-#### `GET /api/players/{player_id}/matches/stats`
+#### `GET /api/matchlogs/{player_id}/stats`
 Pobiera zagregowane statystyki z meczów (podsumowanie).
 
 **Przykład:**
@@ -463,3 +463,4 @@ python -m playwright install chromium
 - **API Documentation:** `../../API_DOCUMENTATION.md`
 - **Documentation Index:** `../../DOCUMENTATION_INDEX.md`
 - **Zasady klasyfikacji:** `../../CLASSIFICATION_RULES.md`
+

@@ -638,6 +638,19 @@ python sync_playwright.py "Robert Lewandowski" --visible
 python sync_playwright.py "Lewandowski" --visible
 ```
 
+### PostgreSQL: "duplicate key value violates unique constraint"
+```powershell
+# Automatyczne naprawienie - uruchom skrypt naprawczy
+python fix_postgres_sequences.py
+
+# Problem rozwiązany automatycznie w skryptach:
+# - sync_player_full.py
+# - sync_match_logs.py  
+# - sync_playwright.py
+
+# Więcej info: BUGFIX_POSTGRES_SEQUENCES.md
+```
+
 ### Scheduler nie działa
 ```powershell
 # Sprawdź czy jest włączony w .env
@@ -719,6 +732,22 @@ Projekt jest otwarty na sugestie i poprawki. W przypadku znalezienia błędów l
   - Zaktualizowany README z wszystkimi funkcjami
   - Swagger UI i ReDoc z pełną dokumentacją API
 
+
+### v0.7.5 (2025-11-29) - Bugfixes & Season Filtering 🐛
+
+**Naprawy:**
+- ✅ Usunięto 621 duplikatów meczów z bazy Supabase
+- ✅ Naprawiono filtrowanie sezonów (rok → daty lipiec-czerwiec)
+  - Sezon 2025-2026 = 1 lipca 2025 - 30 czerwca 2026
+  - API zgodne z frontendem Streamlit
+- ✅ Usunięto post_shot_xg z API /players/stats/goalkeeper
+- ✅ Naprawiono wyświetlanie penalties: 0 zamiast N/A
+
+**Techniczne:**
+- Zamieniono extract('year') na date range filtering
+- COALESCE dla penalties w SQL (NULL → 0)
+- Frontend: penalties_saved w valid_zero_stats
+
 ### v0.4.0 (2025-01) - Playwright Upgrade & Scheduler 🚀
 - ✨ **Playwright Scraper** - modernizacja scrapera z użyciem headless browser
   - Zastąpiono cloudscraper Playwright
@@ -751,3 +780,4 @@ MIT License - Projekt edukacyjny
 ---
 
 **Made with ❤️ for Polish football fans**
+

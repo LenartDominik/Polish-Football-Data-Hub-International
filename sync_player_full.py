@@ -10,6 +10,7 @@ import argparse
 
 sys.path.append('.')
 
+from sqlalchemy import text
 from app.backend.database import SessionLocal
 from app.backend.models.player import Player
 from app.backend.models.player_match import PlayerMatch
@@ -19,6 +20,22 @@ from app.backend.services.fbref_playwright_scraper import FBrefPlaywrightScraper
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+
+def reset_sequences_if_needed(db):
+    """Reset PostgreSQL sequences to avoid ID conflicts after bulk deletes"""
+    try:
+        # Only run for PostgreSQL databases
+        db_url = str(db.bind.url)
+        if 'postgresql' in db_url or 'postgres' in db_url:
+            logger.info("🔧 Resetting PostgreSQL sequences...")
+            db.execute(text("SELECT setval('competition_stats_id_seq', (SELECT COALESCE(MAX(id), 1) FROM competition_stats));"))
+            db.execute(text("SELECT setval('goalkeeper_stats_id_seq', (SELECT COALESCE(MAX(id), 1) FROM goalkeeper_stats));"))
+            db.execute(text("SELECT setval('player_matches_id_seq', (SELECT COALESCE(MAX(id), 1) FROM player_matches));"))
+            db.commit()
+            logger.info("✅ Sequences reset successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not reset sequences (may not be PostgreSQL): {e}")
 
 
 async def sync_competition_stats(scraper: FBrefPlaywrightScraper, db, player: Player):
@@ -33,6 +50,10 @@ async def sync_competition_stats(scraper: FBrefPlaywrightScraper, db, player: Pl
     # Delete existing stats
     db.query(CompetitionStats).filter(CompetitionStats.player_id == player.id).delete()
     db.query(GoalkeeperStats).filter(GoalkeeperStats.player_id == player.id).delete()
+    db.flush()  # Flush to clear session and avoid ID conflicts
+    
+    # Reset sequences for PostgreSQL to prevent ID conflicts
+    reset_sequences_if_needed(db)
     
     saved_count = 0
     for stat in player_data['competition_stats']:
