@@ -36,30 +36,28 @@ def get_competition_type(competition_name: str) -> str:
     
     comp_lower = competition_name.lower()
     
-    # National team (CHECK FIRST - before UEFA competitions)
-    # This prevents international matches from being classified as European cups
-    if any(keyword in comp_lower for keyword in [
-        'national team', 'reprezentacja', 'international',
-        'friendlies', 'wcq', 'world cup', 'uefa euro', 'copa am?rica'
-    ]):
-        return "NATIONAL_TEAM"
-    
-    # Domestic cups (CHECK SECOND - before European competitions)
+    # Domestic cups (CHECK FIRST - before European competitions)
     # This prevents domestic cups from being classified as European competitions
     if any(keyword in comp_lower for keyword in [
         'copa del rey', 'copa', 'pokal', 'coupe', 'coppa',
         'fa cup', 'league cup', 'efl', 'carabao',
-        'dfb-pokal', 'dfl-supercup', 'supercoca', 'supercoppa',
-        'u.s. open cup'
+        'dfb-pokal', 'dfl-supercup', 'supercopa', 'supercoppa',
+        'u.s. open cup', 'leagues cup'
     ]):
         return "DOMESTIC_CUP"
     
-    # European club competitions
+    # European competitions
     if any(keyword in comp_lower for keyword in [
         'champions league', 'europa league', 'conference league', 
-        'uefa', 'champions lg', 'europa lg', 'conf lg', 'ucl', 'uel', 'uecl'
+        'uefa', 'champions lg', 'europa lg', 'ucl', 'uel', 'uecl'
     ]):
         return "EUROPEAN_CUP"
+    
+    # National team
+    if any(keyword in comp_lower for keyword in [
+        'national team', 'reprezentacja', 'international'
+    ]):
+        return "NATIONAL_TEAM"
     
     # Default to league
     return "LEAGUE"
@@ -72,9 +70,8 @@ def save_competition_stats(db, player: Player, stats_list: List[dict], current_s
     """
     saved_count = 0
     
-    # Filter for current season stats only - include all season variants (2025-2026, 2026, 2025)
-    season_variants = [current_season, current_season.replace("-", "/"), current_season.split("-")[0], current_season.split("-")[-1]]
-    current_stats = [s for s in stats_list if s.get('season') in season_variants]
+    # Filter for current season stats only
+    current_stats = [s for s in stats_list if s.get('season') == current_season]
     
     if not current_stats:
         logger.warning(f"No stats found for season {current_season}, using most recent season")
@@ -684,16 +681,19 @@ def sync_competition_stats_from_matches(db, player_id: int) -> int:
                                    'UEFA Euro Qualifying', 'UEFA Euro', 
                                    'Friendlies (M)', 'Copa América']
             if match.competition in international_comps:
-                # Use calendar year for all international matches
-                season = str(year)
+                if 'WCQ' in match.competition or 'World Cup' in match.competition:
+                    if year in [2024, 2025, 2026]:
+                        season = '2026'
+                    elif year in [2021, 2022, 2023]:
+                        season = '2022'
+                    elif year in [2016, 2017, 2018]:
+                        season = '2018'
+                    else:
+                        season = str(year + 1) if month <= 6 else str(year)
+                else:
+                    season = str(year + 1) if month <= 6 else str(year)
             
-            # Group national team matches under "National Team {season}"
-            if match.competition in international_comps:
-                competition_name = f'National Team {season}'
-            else:
-                competition_name = match.competition
-            
-            key = (season, competition_name)
+            key = (season, match.competition)
             stats_dict[key]['games'] += 1
             stats_dict[key]['goals'] += match.goals or 0
             stats_dict[key]['assists'] += match.assists or 0
@@ -710,7 +710,7 @@ def sync_competition_stats_from_matches(db, player_id: int) -> int:
                 CompetitionStats.competition_name == competition
             ).first()
             
-            comp_type = get_competition_type(competition)
+            comp_type = 'LEAGUE' if any(x in competition for x in ['Liga', 'League', 'Bundesliga', 'Premier', 'Serie A']) else 'CUP'
             
             if record:
                 record.games = stats['games']
@@ -720,7 +720,6 @@ def sync_competition_stats_from_matches(db, player_id: int) -> int:
                 record.xg = stats['xg']
                 record.xa = stats['xa']
                 record.games_starts = stats['games_starts']
-                record.competition_type = comp_type  # Update type as well
             else:
                 record = CompetitionStats(
                     player_id=player_id,
@@ -1132,4 +1131,3 @@ def health_check():
         "timestamp": datetime.now().isoformat(),
         "scheduler_running": scheduler.running if scheduler else False
     }
-

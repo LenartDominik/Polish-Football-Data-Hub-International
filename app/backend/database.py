@@ -7,7 +7,14 @@ from .config import settings
 # If the DATABASE_URL contains an async driver like '+aiosqlite', replace
 # it with the synchronous SQLite driver portion so create_engine uses the
 # standard DBAPI and doesn't attempt async IO (which triggers greenlet errors).
-database_url = settings.database_url or "sqlite:///./players.db"
+database_url = settings.database_url
+if not database_url:
+    raise ValueError(
+        "? DATABASE_URL not configured!\n"
+        "Please set DATABASE_URL in your .env file.\n"
+        "Example: DATABASE_URL=postgresql://user:pass@host:port/db\n"
+        "See SUPABASE_GUIDE.md for setup instructions."
+    )
 if "+aiosqlite" in database_url:
     database_url = database_url.replace("+aiosqlite", "")
 
@@ -54,4 +61,5 @@ def get_db():
         yield db
     finally:
         db.close()
+
 

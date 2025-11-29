@@ -31,14 +31,14 @@ def get_competition_type(competition_name: str) -> str:
         'copa del rey', 'copa', 'pokal', 'coupe', 'coppa',
         'fa cup', 'league cup', 'efl', 'carabao',
         'dfb-pokal', 'dfl-supercup', 'supercopa', 'supercoppa',
-        'u.s. open cup'
+        'u.s. open cup', 'leagues cup'
     ]):
         return "DOMESTIC_CUP"
     
     # European competitions
     if any(keyword in comp_lower for keyword in [
         'champions league', 'europa league', 'conference league', 
-        'uefa', 'champions lg', 'europa lg', 'conf lg', 'ucl', 'uel', 'uecl'
+        'uefa', 'champions lg', 'europa lg', 'ucl', 'uel', 'uecl'
     ]):
         return "EUROPEAN_CUP"
     
@@ -79,13 +79,24 @@ def sync_competition_stats_from_matches(db, player_id: int) -> int:
             else:
                 season = f"{year-1}-{year}"
             
-            # International matches use CALENDAR YEAR (not season)
+            # International matches use target year as season
             international_comps = ['WCQ', 'World Cup', 'UEFA Nations League', 
                                    'UEFA Euro Qualifying', 'UEFA Euro', 
                                    'Friendlies (M)', 'Copa América']
             if match.competition in international_comps:
-                # Use calendar year for all international matches
-                season = str(year)
+                # WCQ: use the target World Cup year (special logic)
+                if 'WCQ' in match.competition or 'World Cup' in match.competition:
+                    if year in [2024, 2025, 2026]:
+                        season = '2026'
+                    elif year in [2021, 2022, 2023]:
+                        season = '2022'
+                    elif year in [2016, 2017, 2018]:
+                        season = '2018'
+                    else:
+                        season = str(year + 1) if month <= 6 else str(year)
+                else:
+                    # Other international: use year-based logic
+                    season = str(year + 1) if month <= 6 else str(year)
             
             # Group national team matches under "National Team {season}"
             if match.competition in international_comps:
@@ -193,5 +204,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

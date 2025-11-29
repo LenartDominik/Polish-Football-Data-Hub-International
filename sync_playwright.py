@@ -47,28 +47,30 @@ def get_competition_type(competition_name: str) -> str:
     
     comp_lower = competition_name.lower()
     
-    # Domestic cups (CHECK FIRST - before European competitions)
+    # National team (CHECK FIRST - before UEFA competitions)
+    # This prevents international matches from being classified as European cups
+    if any(keyword in comp_lower for keyword in [
+        'national team', 'reprezentacja', 'international',
+        'friendlies', 'wcq', 'world cup', 'uefa euro', 'copa am?rica'
+    ]):
+        return "NATIONAL_TEAM"
+    
+    # Domestic cups (CHECK SECOND - before European competitions)
     # This prevents domestic cups from being classified as European competitions
     if any(keyword in comp_lower for keyword in [
         'copa del rey', 'copa', 'pokal', 'coupe', 'coppa',
         'fa cup', 'league cup', 'efl', 'carabao',
-        'dfb-pokal', 'dfl-supercup', 'supercopa', 'supercoppa',
-        'u.s. open cup', 'leagues cup'
+        'dfb-pokal', 'dfl-supercup', 'supercoca', 'supercoppa',
+        'u.s. open cup'
     ]):
         return "DOMESTIC_CUP"
     
-    # European competitions
+    # European club competitions
     if any(keyword in comp_lower for keyword in [
         'champions league', 'europa league', 'conference league', 
-        'uefa', 'champions lg', 'europa lg', 'ucl', 'uel', 'uecl'
+        'uefa', 'champions lg', 'europa lg', 'conf lg', 'ucl', 'uel', 'uecl'
     ]):
         return "EUROPEAN_CUP"
-    
-    # National team
-    if any(keyword in comp_lower for keyword in [
-        'national team', 'reprezentacja', 'international'
-    ]):
-        return "NATIONAL_TEAM"
     
     # Default to league
     return "LEAGUE"
@@ -110,8 +112,9 @@ def save_competition_stats(db, player: Player, stats_list: List[dict], current_s
         # Reset sequences for PostgreSQL to prevent ID conflicts
         reset_sequences_if_needed(db)
     else:
-        # Filter for current season stats only
-        current_stats = [s for s in stats_list if s.get('season') == current_season]
+        # Filter for current season stats only - include all season variants (2025-2026, 2026, 2025)
+        season_variants = [current_season, current_season.replace("-", "/"), current_season.split("-")[0], current_season.split("-")[-1]]
+        current_stats = [s for s in stats_list if s.get('season') in season_variants]
         
         if not current_stats:
             logger.warning(f"No stats found for season {current_season}, using most recent season")
@@ -423,3 +426,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
