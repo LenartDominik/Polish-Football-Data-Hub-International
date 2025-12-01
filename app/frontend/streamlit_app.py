@@ -1,4 +1,4 @@
-"""Polish Players Tracker - Streamlit Dashboard
+﻿"""Polish Players Tracker - Streamlit Dashboard
 A simple dashboard to browse and filter Polish football players data.
 Usage:
     streamlit run app/frontend/streamlit_app.py
@@ -950,6 +950,28 @@ if not filtered_df.empty:
                             total_sot = comp_stats_2526['shots_on_target'].sum()
                             total_yellow = comp_stats_2526['yellow_cards'].sum()
                             total_red = comp_stats_2526['red_cards'].sum()
+                        
+                    # KROK 2.5: Add missing European cup data from player_matches
+                    # Sometimes FBref doesn't include all European competitions in competition_stats
+                    # (e.g., Champions League missing but present in match logs)
+                    if not matches_df.empty and 'player_id' in matches_df.columns:
+                        # Get European cup stats from player_matches for current season
+                        euro_stats = get_european_stats_from_matches(row['id'], matches_df, '2025')
+                        if euro_stats:
+                            # Check if this data is already in comp_stats
+                            euro_comps_in_comp_stats = comp_stats_2526[comp_stats_2526['competition_type'] == 'EUROPEAN_CUP']
+                            games_in_comp_stats = euro_comps_in_comp_stats['games'].sum() if not euro_comps_in_comp_stats.empty else 0
+                            
+                            # If player_matches has MORE games than comp_stats, use the difference
+                            if euro_stats['games'] > games_in_comp_stats:
+                                games_diff = euro_stats['games'] - games_in_comp_stats
+                                minutes_diff = euro_stats['minutes'] - (euro_comps_in_comp_stats['minutes'].sum() if not euro_comps_in_comp_stats.empty else 0)
+                                
+                                # Add the missing data to totals
+                                total_games += games_diff
+                                total_minutes += minutes_diff
+                                total_goals += max(0, euro_stats['goals'] - (euro_comps_in_comp_stats['goals'].sum() if not euro_comps_in_comp_stats.empty else 0))
+                                total_assists += max(0, euro_stats['assists'] - (euro_comps_in_comp_stats['assists'].sum() if not euro_comps_in_comp_stats.empty else 0))
 
                     # KROK 3: Wyświetl metryki na bazie zagregowanych danych
                     m1, m2, m3 = st.columns(3)
@@ -1177,21 +1199,6 @@ if not filtered_df.empty:
             # This ensures Champions Lg and Europa Lg show as separate rows
             if not is_goalkeeper and not matches_df.empty:
                 euro_history = get_european_history_by_competition(row['id'], matches_df)
-                
-                # DEBUG OUTPUT
-                if row['name'] and 'Szymański' in row['name']:
-                    st.write("🔍 DEBUG: Processing Szymański")
-                    st.write(f"- matches_df empty: {matches_df.empty}")
-                    st.write(f"- matches_df size: {len(matches_df)}")
-                    st.write(f"- euro_history empty: {euro_history.empty}")
-                    if not euro_history.empty:
-                        st.write(f"- euro_history size: {len(euro_history)}")
-                        st.write("Euro history data:")
-                        st.dataframe(euro_history[['season', 'competition_name', 'games', 'goals', 'assists', 'minutes']])
-                    st.write(f"- stats_to_display (comp_stats) empty: {stats_to_display.empty}")
-                    if not stats_to_display.empty:
-                        st.write(f"- stats_to_display size: {len(stats_to_display)}")
-                
                 if not euro_history.empty and not stats_to_display.empty:
                     # Remove aggregated EUROPEAN_CUP entries from comp_stats
                     # and replace with detailed entries from player_matches
@@ -1200,16 +1207,6 @@ if not filtered_df.empty:
                     stats_to_display = pd.concat([stats_to_display, euro_history], ignore_index=True)
                     # Sort by season and competition_type
                     stats_to_display = stats_to_display.sort_values(['season', 'competition_type'], ascending=False)
-                    
-                    # DEBUG OUTPUT
-                    if row['name'] and 'Szymański' in row['name']:
-                        st.write("✅ After merge:")
-                        st.write(f"- stats_to_display size: {len(stats_to_display)}")
-                        szymanski_2526 = stats_to_display[stats_to_display['season'].isin(['2025-2026', '2025/2026'])]
-                        st.write(f"- 2025-2026 records: {len(szymanski_2526)}")
-                        if not szymanski_2526.empty:
-                            st.write("2025-2026 data:")
-                            st.dataframe(szymanski_2526[['season', 'competition_type', 'competition_name', 'games', 'goals', 'assists']])
                 elif not euro_history.empty:
                     # If comp_stats is empty but we have euro_history, use it
                     stats_to_display = euro_history
@@ -1262,7 +1259,7 @@ if not filtered_df.empty:
                         season_display = season_display[~mask_bad_row]
                     # If still empty, fallback entirely to comp_stats (rare)
                     if season_display.empty and not comp_stats.empty:
-                        season_display = comp_stats[['season', 'competition_type', 'competition_name', 'games', 'minutes']].copy()
+                        season_display = stats_to_display[['season', 'competition_type', 'competition_name', 'games', 'minutes']].copy()
                         season_display['games_starts'] = 0
                         season_display['clean_sheets'] = 0
                         season_display['save_percentage'] = _pd.NA
@@ -1285,7 +1282,7 @@ if not filtered_df.empty:
                             season_display = _pd.concat([season_display[~nt_mask], nt_agg], ignore_index=True)
                 else:
                     # Outfield player stats
-                    season_display = comp_stats[['season', 'competition_type', 'competition_name', 'games', 'goals', 'assists', 'xg', 'xa', 'yellow_cards', 'red_cards', 'minutes']].copy()
+                    season_display = stats_to_display[['season', 'competition_type', 'competition_name', 'games', 'goals', 'assists', 'xg', 'xa', 'yellow_cards', 'red_cards', 'minutes']].copy()
                     
                     # Aggregate National Team rows per season (WCQ + Friendlies => National Team (All))
                     if not season_display.empty and 'competition_type' in season_display.columns:
@@ -1368,12 +1365,23 @@ if not filtered_df.empty:
                     season_display['xg'] = season_display['xg'].apply(lambda x: round(x, 2) if pd.notna(x) else 0.0)
                 if 'xa' in season_display.columns:
                     season_display['xa'] = season_display['xa'].apply(lambda x: round(x, 2) if pd.notna(x) else 0.0)
-                # Fill NaN values with 0 for display
+                # Fill NaN values with 0 for display (except minutes - we'll handle that specially)
                 season_display = season_display.fillna(0)
+                
                 # Convert numeric columns to int where appropriate, only if column exists
-                for col in ['games', 'goals', 'clean_sheets', 'assists', 'shots', 'shots_on_target', 'yellow_cards', 'red_cards', 'minutes', 'goals_against']:
+                for col in ['games', 'goals', 'clean_sheets', 'assists', 'shots', 'shots_on_target', 'yellow_cards', 'red_cards', 'goals_against']:
                     if col in season_display.columns:
                         season_display[col] = season_display[col].astype(int)
+                
+                # Special handling for minutes: Show "N/A" for 0 minutes when games > 0
+                # This indicates missing data rather than player not playing
+                if 'minutes' in season_display.columns:
+                    # Create a mask for rows with 0 minutes but games > 0
+                    mask_missing_minutes = (season_display['minutes'] == 0) & (season_display['games'] > 0)
+                    # Convert minutes to string type for mixed int/string values
+                    season_display['minutes'] = season_display['minutes'].astype(int).astype(str)
+                    # Replace 0 with "N/A" where data is missing
+                    season_display.loc[mask_missing_minutes, 'minutes'] = 'N/A'
                 # Round save_percentage for goalkeepers
                 if 'save_percentage' in season_display.columns:
                     season_display['save_percentage'] = season_display['save_percentage'].apply(lambda x: round(x, 1) if pd.notna(x) else 0.0)

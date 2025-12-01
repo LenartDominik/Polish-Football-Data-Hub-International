@@ -137,12 +137,40 @@ def fix_missing_minutes_from_matchlogs(db, player: Player):
             continue
         
         # Get all match logs for this season and competition
-        matches = db.query(PlayerMatch).filter(
-            PlayerMatch.player_id == player.id,
-            PlayerMatch.match_date >= season_start,
-            PlayerMatch.match_date <= season_end,
-            PlayerMatch.competition.ilike(f"%{stat.competition_name}%")
-        ).all()
+        # Use flexible matching for competition names (handle different formats)
+        comp_name_lower = stat.competition_name.lower()
+        
+        # Map common variations
+        comp_mappings = {
+            'europa lg': ['europa lg', 'europa league', 'uefa europa league'],
+            'champions lg': ['champions lg', 'champions league', 'uefa champions league'],
+            'conf lg': ['conf lg', 'conference league', 'uefa conference league'],
+            'süper lig': ['süper lig', 'super lig'],
+            'serie a': ['serie a'],
+            'la liga': ['la liga', 'laliga'],
+            'premier league': ['premier league'],
+            'bundesliga': ['bundesliga'],
+        }
+        
+        # Find matches for this competition (try multiple name variations)
+        search_terms = [stat.competition_name]
+        for key, variations in comp_mappings.items():
+            if key in comp_name_lower:
+                search_terms = variations
+                break
+        
+        matches = []
+        for term in search_terms:
+            term_matches = db.query(PlayerMatch).filter(
+                PlayerMatch.player_id == player.id,
+                PlayerMatch.match_date >= season_start,
+                PlayerMatch.match_date <= season_end,
+                PlayerMatch.competition.ilike(f"%{term}%")
+            ).all()
+            matches.extend(term_matches)
+        
+        # Remove duplicates
+        matches = list({m.id: m for m in matches}.values())
         
         if not matches:
             continue
@@ -165,12 +193,40 @@ def fix_missing_minutes_from_matchlogs(db, player: Player):
             continue
         
         # Get all match logs for this season and competition
-        matches = db.query(PlayerMatch).filter(
-            PlayerMatch.player_id == player.id,
-            PlayerMatch.match_date >= season_start,
-            PlayerMatch.match_date <= season_end,
-            PlayerMatch.competition.ilike(f"%{stat.competition_name}%")
-        ).all()
+        # Use flexible matching for competition names (handle different formats)
+        comp_name_lower = stat.competition_name.lower()
+        
+        # Map common variations
+        comp_mappings = {
+            'europa lg': ['europa lg', 'europa league', 'uefa europa league'],
+            'champions lg': ['champions lg', 'champions league', 'uefa champions league'],
+            'conf lg': ['conf lg', 'conference league', 'uefa conference league'],
+            'süper lig': ['süper lig', 'super lig'],
+            'serie a': ['serie a'],
+            'la liga': ['la liga', 'laliga'],
+            'premier league': ['premier league'],
+            'bundesliga': ['bundesliga'],
+        }
+        
+        # Find matches for this competition (try multiple name variations)
+        search_terms = [stat.competition_name]
+        for key, variations in comp_mappings.items():
+            if key in comp_name_lower:
+                search_terms = variations
+                break
+        
+        matches = []
+        for term in search_terms:
+            term_matches = db.query(PlayerMatch).filter(
+                PlayerMatch.player_id == player.id,
+                PlayerMatch.match_date >= season_start,
+                PlayerMatch.match_date <= season_end,
+                PlayerMatch.competition.ilike(f"%{term}%")
+            ).all()
+            matches.extend(term_matches)
+        
+        # Remove duplicates
+        matches = list({m.id: m for m in matches}.values())
         
         if not matches:
             continue
