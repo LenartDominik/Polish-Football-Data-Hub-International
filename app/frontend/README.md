@@ -95,7 +95,7 @@ Frontend komunikuje się z backendem FastAPI przez API:
 
 ```python
 # Domyślny adres backendu
-BACKEND_URL = "http://127.0.0.1:8000"
+BACKEND_API_URL = "http://127.0.0.1:8000"
 
 # Używane endpointy:
 # - GET /api/players - lista graczy
@@ -117,7 +117,7 @@ streamlit run streamlit_app.py --server.port 8502
 
 Edytuj `streamlit_app.py`:
 ```python
-BACKEND_URL = "http://your-backend-url:8000"
+BACKEND_API_URL = "http://your-backend-url:8000"
 ```
 
 ## 🧪 Testowanie

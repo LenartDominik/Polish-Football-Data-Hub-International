@@ -231,7 +231,7 @@ git push origin main
 
 ```toml
 # .streamlit/secrets.toml
-BACKEND_URL = "https://polish-players-tracker-xxxx.onrender.com"
+BACKEND_API_URL = "https://polish-players-tracker-xxxx.onrender.com"
 ```
 
 **Zamień `xxxx` na swój Render URL!**
@@ -288,7 +288,7 @@ SCRAPER_INTERVAL=21600  # 6 godzin
 
 ```toml
 # App Settings → Secrets
-BACKEND_URL = "https://your-backend.onrender.com"
+BACKEND_API_URL = "https://your-backend.onrender.com"
 
 # Opcjonalne:
 DEBUG = false
@@ -372,7 +372,7 @@ git push origin main
 **Objaw:** "Error connecting to backend"
 
 **Rozwiązanie:**
-1. Sprawdź `BACKEND_URL` w secrets
+1. Sprawdź `BACKEND_API_URL` w secrets
 2. Sprawdź czy backend działa: `curl https://your-backend.onrender.com/health`
 3. Sprawdź CORS w `app/backend/main.py`:
    ```python
@@ -504,7 +504,7 @@ API_KEY = "your-secret-key"
 
 ### Frontend (Streamlit Cloud):
 - [ ] Utworzono App
-- [ ] Dodano `BACKEND_URL` w secrets
+- [ ] Dodano `BACKEND_API_URL` w secrets
 - [ ] Deploy zakończony sukcesem ✅
 - [ ] Aplikacja ładuje dane
 - [ ] Zapisano Frontend URL

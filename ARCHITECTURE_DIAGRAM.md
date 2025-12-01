@@ -37,7 +37,7 @@
 │  └─────────────────────────────────────────────────────────────────────────┘   │
 │                                                                                 │
 │  Secrets (.streamlit/secrets.toml):                                            │
-│  ├── BACKEND_URL = "https://polish-players-tracker.onrender.com"               │
+│  ├── BACKEND_API_URL = "https://polish-players-tracker.onrender.com"           │
 │  └── DEBUG = false                                                              │
 │                                                                                 │
 └────────────────────────────────────┬────────────────────────────────────────────┘
@@ -242,7 +242,7 @@ User sees Dashboard
 ┌─────────────────────┐
 │  streamlit_app.py   │
 │  - Load secrets     │
-│  - BACKEND_URL      │
+│  - BACKEND_API_URL  │
 └──────┬──────────────┘
        │
        │ HTTPS API Call
@@ -342,11 +342,11 @@ User sees Dashboard
 ```python
 @st.cache_data(ttl=3600)  # 1 hour
 def get_players():
-    return requests.get(f"{BACKEND_URL}/api/players")
+    return requests.get(f"{BACKEND_API_URL}/api/players")
 
 @st.cache_data(ttl=300)  # 5 minutes
 def get_player_stats(player_id):
-    return requests.get(f"{BACKEND_URL}/api/stats/{player_id}")
+    return requests.get(f"{BACKEND_API_URL}/api/stats/{player_id}")
 ```
 
 **Backend (FastAPI):**
