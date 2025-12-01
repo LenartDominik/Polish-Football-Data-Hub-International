@@ -191,7 +191,7 @@ UPDATE players SET api_id = 'abc12345' WHERE name = 'Jakub Moder';
 
 ### 4. Synchronizuj:
 ```bash
-python sync_playwright.py "Jakub Moder"
+python sync_player.py "Jakub Moder"
 ```
 
 ### 5. Sprawdź w aplikacji:
@@ -268,7 +268,7 @@ SELECT COUNT(*) FROM players WHERE api_id IS NOT NULL AND api_id != '';
 - **Rozwiązanie:** Pomiń tych graczy lub usuń z bazy
 
 ### 3. Po dodaniu FBref ID:
-- Musisz zsynchronizować gracza: `python sync_playwright.py "Imię Nazwisko"`
+- Musisz zsynchronizować gracza: `python sync_player.py "Imię Nazwisko"`
 - LUB czekać na automatyczną synchronizację (scheduler)
 
 ---

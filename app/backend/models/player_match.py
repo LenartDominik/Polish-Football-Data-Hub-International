@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from ..database import Base
 
@@ -51,3 +51,14 @@ class PlayerMatch(Base):
     
     # Relacja
     player = relationship("Player", back_populates="matches")
+    
+    # Unique constraint - prevent duplicate matches
+    __table_args__ = (
+        UniqueConstraint(
+            'player_id', 
+            'match_date', 
+            'competition', 
+            'opponent',
+            name='uq_player_match'
+        ),
+    )

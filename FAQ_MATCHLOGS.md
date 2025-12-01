@@ -108,7 +108,7 @@ Sprawdź sekcję `"scheduler"` w odpowiedzi.
 #### Q: Matchlogi nie są synchronizowane
 **A:**
 1. Sprawdź czy gracz ma FBref ID (`api_id` lub `fbref_id`)
-2. Jeśli nie ma: `python sync_playwright.py "Nazwa Gracza"`
+2. Jeśli nie ma: `python sync_player.py "Nazwa Gracza"`
 3. Sprawdź logi dla szczegółów błędu
 
 #### Q: Synchronizacja trwa wieczność
@@ -312,7 +312,7 @@ python sync_match_logs.py "Robert Lewandowski"
 
 **Most common issues:**
 1. ❌ Scheduler disabled → `ENABLE_SCHEDULER=true`
-2. ❌ Brak FBref ID → `python sync_playwright.py "Nazwa"`
+2. ❌ Brak FBref ID → `python sync_player.py "Nazwa"`
 3. ❌ Email nie działa → Użyj App Password dla Gmail
 4. ❌ Długa synchronizacja → To normalne (12s rate limit)
 

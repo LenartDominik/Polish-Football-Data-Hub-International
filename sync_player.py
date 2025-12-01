@@ -1,10 +1,16 @@
 """
 Synchronize Polish players with FBref using Playwright scraper
+Syncs both competition stats and match logs for current season
 This script uses browser automation for reliable data fetching
+
+Usage:
+    python sync_playwright.py "Player Name"                    # Current season
+    python sync_playwright.py "Player Name" --all-seasons      # All seasons  
+    python sync_playwright.py "Player Name" --season=2024-2025 # Specific season
 """
 import sys
 import asyncio
-from datetime import date
+from datetime import date, datetime
 from typing import Optional, List
 import logging
 
@@ -13,6 +19,7 @@ sys.path.append('.')
 from sqlalchemy import text
 from app.backend.database import SessionLocal
 from app.backend.models.player import Player
+from app.backend.models.player_match import PlayerMatch
 from app.backend.models.competition_stats import CompetitionStats, CompetitionType
 from app.backend.models.goalkeeper_stats import GoalkeeperStats
 from app.backend.services.fbref_playwright_scraper import FBrefPlaywrightScraper
@@ -76,6 +83,111 @@ def get_competition_type(competition_name: str) -> str:
     return "LEAGUE"
 
 
+def get_season_date_range(season: str):
+    """Get date range for a season (e.g., 2024-2025 -> July 2024 to June 2025)"""
+    if '-' in season:
+        year_start = int(season.split('-')[0])
+        year_end = int(season.split('-')[1])
+        return date(year_start, 7, 1), date(year_end, 6, 30)
+    else:
+        # Calendar year for national team (e.g., "2024" -> Jan-Dec 2024)
+        year = int(season)
+        return date(year, 1, 1), date(year, 12, 31)
+
+
+def fix_missing_minutes_from_matchlogs(db, player: Player):
+    """
+    Fix missing minutes in competition_stats and goalkeeper_stats by calculating from match logs.
+    FBref sometimes doesn't provide minutes data in season stats tables.
+    """
+    logger.info(f"🔧 Checking for missing minutes data...")
+    
+    # Find all competition stats with 0 minutes but games > 0
+    comp_stats_to_fix = db.query(CompetitionStats).filter(
+        CompetitionStats.player_id == player.id,
+        CompetitionStats.minutes == 0,
+        CompetitionStats.games > 0
+    ).all()
+    
+    # Find all goalkeeper stats with 0 minutes but games > 0
+    from app.backend.models.goalkeeper_stats import GoalkeeperStats
+    gk_stats_to_fix = db.query(GoalkeeperStats).filter(
+        GoalkeeperStats.player_id == player.id,
+        GoalkeeperStats.minutes == 0,
+        GoalkeeperStats.games > 0
+    ).all()
+    
+    total_to_fix = len(comp_stats_to_fix) + len(gk_stats_to_fix)
+    
+    if total_to_fix == 0:
+        logger.info("✅ No missing minutes data")
+        return
+    
+    logger.info(f"⚠️ Found {total_to_fix} records with missing minutes data ({len(comp_stats_to_fix)} comp + {len(gk_stats_to_fix)} gk)")
+    
+    fixed_count = 0
+    
+    # Fix competition stats
+    for stat in comp_stats_to_fix:
+        # Get date range for this season
+        try:
+            season_start, season_end = get_season_date_range(stat.season)
+        except Exception as e:
+            logger.warning(f"Could not parse season {stat.season}: {e}")
+            continue
+        
+        # Get all match logs for this season and competition
+        matches = db.query(PlayerMatch).filter(
+            PlayerMatch.player_id == player.id,
+            PlayerMatch.match_date >= season_start,
+            PlayerMatch.match_date <= season_end,
+            PlayerMatch.competition.ilike(f"%{stat.competition_name}%")
+        ).all()
+        
+        if not matches:
+            continue
+        
+        # Calculate total minutes
+        total_minutes = sum(m.minutes_played or 0 for m in matches)
+        
+        if total_minutes > 0:
+            stat.minutes = total_minutes
+            fixed_count += 1
+            logger.info(f"  ✅ [COMP] {stat.season} {stat.competition_name}: {total_minutes} min from {len(matches)} matches")
+    
+    # Fix goalkeeper stats
+    for stat in gk_stats_to_fix:
+        # Get date range for this season
+        try:
+            season_start, season_end = get_season_date_range(stat.season)
+        except Exception as e:
+            logger.warning(f"Could not parse season {stat.season}: {e}")
+            continue
+        
+        # Get all match logs for this season and competition
+        matches = db.query(PlayerMatch).filter(
+            PlayerMatch.player_id == player.id,
+            PlayerMatch.match_date >= season_start,
+            PlayerMatch.match_date <= season_end,
+            PlayerMatch.competition.ilike(f"%{stat.competition_name}%")
+        ).all()
+        
+        if not matches:
+            continue
+        
+        # Calculate total minutes
+        total_minutes = sum(m.minutes_played or 0 for m in matches)
+        
+        if total_minutes > 0:
+            stat.minutes = total_minutes
+            fixed_count += 1
+            logger.info(f"  ✅ [GK] {stat.season} {stat.competition_name}: {total_minutes} min from {len(matches)} matches")
+    
+    if fixed_count > 0:
+        db.commit()
+        logger.info(f"✅ Fixed {fixed_count} records with missing minutes!")
+
+
 def save_competition_stats(db, player: Player, stats_list: List[dict], current_season: str = "2025-2026", save_all: bool = False):
     # DEBUG: Print all parsed stats for this player and season
     logger.info(f"[DEBUG] Parsed stats for {player.name} (season={current_season}):")
@@ -116,6 +228,8 @@ def save_competition_stats(db, player: Player, stats_list: List[dict], current_s
         season_variants = [current_season, current_season.replace("-", "/"), current_season.split("-")[0], current_season.split("-")[-1]]
         current_stats = [s for s in stats_list if s.get('season') in season_variants]
         
+        logger.info(f"📊 Found {len(current_stats)} stats for season {current_season} (from {len(stats_list)} total)")
+        
         if not current_stats:
             logger.warning(f"No stats found for season {current_season}, using most recent season")
             # Get the most recent season
@@ -126,17 +240,19 @@ def save_competition_stats(db, player: Player, stats_list: List[dict], current_s
                     current_stats = [s for s in stats_list if s.get('season') == latest_season]
                     current_season = latest_season
         
-        # Delete existing stats for this season only
-        db.query(CompetitionStats).filter(
-            CompetitionStats.player_id == player.id,
-            CompetitionStats.season == current_season
-        ).delete()
-        
-        db.query(GoalkeeperStats).filter(
-            GoalkeeperStats.player_id == player.id,
-            GoalkeeperStats.season == current_season
-        ).delete()
+        # Delete existing stats for target season and all variants
+        for season_variant in season_variants:
+            db.query(CompetitionStats).filter(
+                CompetitionStats.player_id == player.id,
+                CompetitionStats.season == season_variant
+            ).delete()
+            
+            db.query(GoalkeeperStats).filter(
+                GoalkeeperStats.player_id == player.id,
+                GoalkeeperStats.season == season_variant
+            ).delete()
         db.flush()  # Flush to clear session and avoid ID conflicts
+        logger.info(f"🗑️ Cleared existing stats for seasons: {season_variants}")
         
         # Reset sequences for PostgreSQL to prevent ID conflicts
         reset_sequences_if_needed(db)
@@ -229,6 +345,109 @@ def save_competition_stats(db, player: Player, stats_list: List[dict], current_s
     return saved_count
 
 
+async def sync_match_logs_for_season(scraper: FBrefPlaywrightScraper, db, player: Player, season: str):
+    """Sync match logs for a specific season"""
+    logger.info(f"📋 Syncing match logs for {player.name} ({season})")
+    
+    # Get FBref ID
+    fbref_id = getattr(player, 'fbref_id', None) or getattr(player, 'api_id', None)
+    if not fbref_id:
+        logger.warning(f"⚠️ No FBref ID for {player.name}")
+        return 0
+    
+    match_logs = await scraper.get_player_match_logs(fbref_id, player.name, season)
+    if not match_logs:
+        logger.warning(f"⚠️ No match logs found for {season}")
+        return 0
+    
+    logger.info(f"📊 Found {len(match_logs)} matches")
+    
+    # Parse season to get date range (e.g., 2025-2026 = July 1, 2025 to June 30, 2026)
+    from datetime import date
+    year_start = int(season.split('-')[0])
+    year_end = year_start + 1
+    season_start = date(year_start, 7, 1)
+    season_end = date(year_end, 6, 30)
+    
+    # Delete existing matches for this season only
+    deleted = db.query(PlayerMatch).filter(
+        PlayerMatch.player_id == player.id,
+        PlayerMatch.match_date >= season_start,
+        PlayerMatch.match_date <= season_end
+    ).delete(synchronize_session='fetch')
+    
+    # Commit deletion immediately
+    db.commit()
+    
+    if deleted > 0:
+        logger.info(f"🗑️ Deleted {deleted} existing match logs for {season}")
+    
+    saved_count = 0
+    skipped_duplicates = 0
+    for match_data in match_logs:
+        try:
+            # Parse date
+            match_date_str = match_data.get('match_date')
+            if match_date_str:
+                try:
+                    match_date = datetime.strptime(match_date_str, '%Y-%m-%d').date()
+                except:
+                    try:
+                        parts = match_date_str.split('-')
+                        if len(parts) == 3:
+                            match_date = date(int(parts[0]), int(parts[1]), int(parts[2]))
+                        else:
+                            match_date = date.today()
+                    except:
+                        match_date = date.today()
+            else:
+                match_date = date.today()
+            
+            # Create match record
+            match = PlayerMatch(
+                player_id=player.id,
+                match_date=match_date,
+                competition=match_data.get('competition', ''),
+                round=match_data.get('round', ''),
+                venue=match_data.get('venue', ''),
+                opponent=match_data.get('opponent', ''),
+                result=match_data.get('result', ''),
+                minutes_played=match_data.get('minutes_played', 0) or 0,
+                goals=match_data.get('goals', 0) or 0,
+                assists=match_data.get('assists', 0) or 0,
+                shots=match_data.get('shots', 0) or 0,
+                shots_on_target=match_data.get('shots_on_target', 0) or 0,
+                xg=match_data.get('xg', 0.0) or 0.0,
+                xa=match_data.get('xa', 0.0) or 0.0,
+                passes_completed=match_data.get('passes_completed', 0) or 0,
+                passes_attempted=match_data.get('passes_attempted', 0) or 0,
+                pass_completion_pct=match_data.get('pass_completion_pct', 0.0) or 0.0,
+                key_passes=match_data.get('key_passes', 0) or 0,
+                tackles=match_data.get('tackles', 0) or 0,
+                interceptions=match_data.get('interceptions', 0) or 0,
+                blocks=match_data.get('blocks', 0) or 0,
+                touches=match_data.get('touches', 0) or 0,
+            )
+            db.add(match)
+            saved_count += 1
+        except Exception as e:
+            # Check if it's a duplicate error
+            if 'uq_player_match' in str(e) or 'UNIQUE constraint' in str(e):
+                skipped_duplicates += 1
+                db.rollback()
+            else:
+                logger.error(f"❌ Error saving match: {e}")
+                db.rollback()
+    
+    db.commit()
+    
+    if skipped_duplicates > 0:
+        logger.info(f"⚠️ Skipped {skipped_duplicates} duplicate matches")
+    
+    logger.info(f"✅ Saved {saved_count} matches for {season}")
+    return saved_count
+
+
 async def sync_player(scraper: FBrefPlaywrightScraper, db, player: dict, use_search: bool = True, save_all_seasons: bool = False, target_season: str = "2025-2026") -> bool:
     """
     Synchronize a single player
@@ -306,6 +525,21 @@ async def sync_player(scraper: FBrefPlaywrightScraper, db, player: dict, use_sea
                 logger.warning(f"❌ DB player not found for stats saving")
         else:
             logger.warning(f"⚠️ No competition stats found")
+        
+        # Save match logs for target season (only if not saving all seasons)
+        if not save_all_seasons:
+            db_player = db.query(Player).filter(Player.id == player['id']).first()
+            if db_player:
+                logger.info(f"\n📋 Syncing match logs for {target_season}...")
+                matches_saved = await sync_match_logs_for_season(scraper, db, db_player, target_season)
+                logger.info(f"✅ Saved {matches_saved} match logs")
+                
+                # Fix missing minutes in competition stats using match logs
+                if matches_saved > 0:
+                    fix_missing_minutes_from_matchlogs(db, db_player)
+            else:
+                logger.warning(f"❌ DB player not found for match logs")
+        
         db.commit()
         logger.info(f"✅ Successfully synced {player_name}")
         return True

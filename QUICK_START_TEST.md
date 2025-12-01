@@ -37,7 +37,7 @@ ZnajdŸ sekcjê **"matchlogs"** - powinny byæ 3 endpointy:
 1. Kliknij na **GET /api/matchlogs/{player_id}**
 2. Kliknij **"Try it out"**
 3. Wpisz `player_id`: **5** (lub inne ID z twojej bazy)
-4. Opcjonalnie dodaj: `season`: **2025-2026**
+4. Opcjonalnie dodaj: `season`: **2025-2026** (obecny sezon)
 5. Kliknij **"Execute"**
 
 **Oczekiwany rezultat:** 200 OK + JSON z list¹ meczów
@@ -79,8 +79,11 @@ curl http://localhost:8000/api/matchlogs/5 | jq
 # Test 4: Stats
 curl http://localhost:8000/api/matchlogs/5/stats | jq
 
-# Test 5: Z filtrem sezonu
+# Test 5: Z filtrem sezonu (obecny)
 curl "http://localhost:8000/api/matchlogs/5?season=2025-2026" | jq
+
+# Test 6: Z filtrem poprzedniego sezonu
+curl "http://localhost:8000/api/matchlogs/5?season=2024-2025" | jq
 ```
 
 **Jeœli nie masz `jq`:** usuñ `| jq` z komend

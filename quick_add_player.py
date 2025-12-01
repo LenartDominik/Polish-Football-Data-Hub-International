@@ -14,7 +14,7 @@ sys.path.append('.')
 from app.backend.database import SessionLocal
 from app.backend.models.player import Player
 from app.backend.services.fbref_playwright_scraper import FBrefPlaywrightScraper
-from sync_playwright import sync_player
+from sync_player import sync_player
 from sync_match_logs import sync_player_matches
 from datetime import date
 

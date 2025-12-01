@@ -119,6 +119,132 @@ def get_national_team_history_by_calendar_year(player_id, matches_df):
     
     return yearly_stats
 
+# Helper function to get European cup stats from player_matches (includes all European competitions)
+def get_european_stats_from_matches(player_id, matches_df, season_year='2025'):
+    """
+    Aggregate European cup statistics from player_matches table.
+    This includes Champions Lg, Europa Lg, Conference Lg, etc.
+    Needed because FBref aggregates these differently in competition_stats.
+    """
+    if matches_df.empty:
+        return None
+    
+    required_columns = ['player_id', 'match_date', 'competition', 'minutes_played', 'goals', 'assists']
+    if not all(col in matches_df.columns for col in required_columns):
+        return None
+    
+    # European competitions (all variants)
+    european_competitions = ['Champions Lg', 'Europa Lg', 'Conf Lg', 'UEFA Champions League', 
+                            'UEFA Europa League', 'UEFA Conference League']
+    
+    # Filter matches for season (July-June)
+    season_start = f"{season_year}-07-01"
+    season_end = f"{int(season_year)+1}-06-30"
+    
+    euro_matches = matches_df[
+        (matches_df['player_id'] == player_id) &
+        (matches_df['competition'].isin(european_competitions)) &
+        (matches_df['match_date'] >= season_start) &
+        (matches_df['match_date'] <= season_end) &
+        (matches_df['minutes_played'] > 0)  # ONLY count matches where player actually played
+    ]
+    
+    if euro_matches.empty:
+        return None
+    
+    # Count starts (45+ minutes)
+    starts = len(euro_matches[euro_matches['minutes_played'] >= 45])
+    
+    # Aggregate stats
+    stats = {
+        'games': len(euro_matches),
+        'starts': starts,
+        'goals': euro_matches['goals'].sum(),
+        'assists': euro_matches['assists'].sum(),
+        'minutes': euro_matches['minutes_played'].sum(),
+        'xg': euro_matches['xg'].sum() if 'xg' in euro_matches.columns else 0.0,
+        'xa': euro_matches['xa'].sum() if 'xa' in euro_matches.columns else 0.0,
+        'shots': euro_matches['shots'].sum() if 'shots' in euro_matches.columns else 0,
+        'shots_on_target': euro_matches['shots_on_target'].sum() if 'shots_on_target' in euro_matches.columns else 0,
+        'competitions': euro_matches['competition'].unique().tolist()
+    }
+    
+    return stats
+
+# Helper function to get European stats history BY COMPETITION from player_matches
+def get_european_history_by_competition(player_id, matches_df):
+    """
+    Get European cup statistics grouped by season and competition from player_matches.
+    Returns separate rows for Champions Lg, Europa Lg, etc.
+    This is needed because FBref aggregates them in competition_stats.
+    """
+    if matches_df.empty:
+        return pd.DataFrame()
+    
+    required_columns = ['player_id', 'match_date', 'competition', 'minutes_played', 'goals', 'assists']
+    if not all(col in matches_df.columns for col in required_columns):
+        return pd.DataFrame()
+    
+    # European competitions
+    european_competitions = ['Champions Lg', 'Europa Lg', 'Conf Lg', 'UEFA Champions League', 
+                            'UEFA Europa League', 'UEFA Conference League']
+    
+    euro_matches = matches_df[
+        (matches_df['player_id'] == player_id) &
+        (matches_df['competition'].isin(european_competitions)) &
+        (matches_df['minutes_played'] > 0)  # ONLY count matches where player actually played
+    ].copy()
+    
+    if euro_matches.empty:
+        return pd.DataFrame()
+    
+    # Extract season from match_date (July-June seasons)
+    def get_season(date_str):
+        try:
+            year = int(date_str[:4])
+            month = int(date_str[5:7])
+            # If July or later, it's the start of the season
+            if month >= 7:
+                return f"{year}-{year+1}"
+            else:
+                return f"{year-1}-{year}"
+        except:
+            return None
+    
+    euro_matches['season'] = euro_matches['match_date'].apply(get_season)
+    euro_matches = euro_matches[euro_matches['season'].notna()]
+    
+    if euro_matches.empty:
+        return pd.DataFrame()
+    
+    # Group by season and competition
+    grouped = euro_matches.groupby(['season', 'competition']).agg({
+        'match_date': 'count',  # games
+        'goals': 'sum',
+        'assists': 'sum',
+        'minutes_played': 'sum',
+        'xg': 'sum',
+        'xa': 'sum',
+        'shots': 'sum',
+        'shots_on_target': 'sum',
+        'yellow_cards': 'sum',
+        'red_cards': 'sum'
+    }).reset_index()
+    
+    # Rename columns
+    grouped.columns = ['season', 'competition_name', 'games', 'goals', 'assists', 'minutes', 
+                       'xg', 'xa', 'shots', 'shots_on_target', 'yellow_cards', 'red_cards']
+    
+    # Add competition_type
+    grouped['competition_type'] = 'EUROPEAN_CUP'
+    
+    # Reorder columns to match comp_stats format
+    grouped = grouped[['season', 'competition_type', 'competition_name', 'games', 'goals', 
+                       'assists', 'xg', 'xa', 'shots', 'shots_on_target', 'yellow_cards', 
+                       'red_cards', 'minutes']]
+    
+    return grouped
+
 st.markdown("""
     <style>
         /* Ukrywa tylko link/element z label "streamlit app" w sidebarze */
@@ -364,110 +490,173 @@ if not filtered_df.empty:
                     st.write("### 🌍 European Cups (2025-2026)")
                     
                     found_euro = False
-                    if is_gk and not gk_stats.empty:
-                        gk_stats_2526 = gk_stats[gk_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
-                        euro_stats = gk_stats_2526[gk_stats_2526['competition_type'] == 'EUROPEAN_CUP']
-                        if not euro_stats.empty:
-                            found_euro = True
-                            for _, gk_row in euro_stats.iterrows():
-                                st.markdown(f"**{gk_row['competition_name']}**")
-                                m1, m2, m3 = st.columns(3)
-                                m1.metric("Games", int(gk_row.get('games', 0) or 0))
-                                m2.metric("CS", int(gk_row.get('clean_sheets', 0) or 0))
-                                m3.metric("GA", int(gk_row.get('goals_against', 0) or 0))
+                    euro_competitions_list = []
                     
-                    if not found_euro and not comp_stats.empty:
-                         # Fallback dla graczy z pola lub gdy brak GK stats
-                        comp_stats_2526 = comp_stats[comp_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
-                        euro_stats = comp_stats_2526[comp_stats_2526['competition_type'] == 'EUROPEAN_CUP']
-                        if not euro_stats.empty:
-                            found_euro = True
-                            for _, comp_row in euro_stats.iterrows():
-                                st.markdown(f"**{comp_row['competition_name']}**")
-                                m1, m2, m3 = st.columns(3)
-                                m1.metric("Games", int(comp_row['games'] or 0))
-                                m2.metric("Goals", 0 if is_gk else int(comp_row['goals'] or 0))
-                                m3.metric("Assists", int(comp_row['assists'] or 0))
+                    # Try to get stats from player_matches BY COMPETITION (separate rows)
+                    if not matches_df.empty:
+                        # Get European history by competition for current season
+                        euro_history = get_european_history_by_competition(row['id'], matches_df)
+                        if not euro_history.empty:
+                            # Filter for 2025-2026 season
+                            euro_2526 = euro_history[euro_history['season'].isin(['2025-2026', '2025/2026'])]
+                            if not euro_2526.empty:
+                                found_euro = True
+                                # Display each competition separately
+                                for _, euro_row in euro_2526.iterrows():
+                                    st.markdown(f"**{euro_row['competition_name']}**")
+                                    m1, m2, m3 = st.columns(3)
+                                    m1.metric("Games", int(euro_row['games']))
+                                    m2.metric("Goals", 0 if is_gk else int(euro_row['goals']))
+                                    m3.metric("Assists", int(euro_row['assists']))
+                                    euro_competitions_list.append(euro_row['competition_name'])
+                    
+                    # Fallback to competition_stats if no player_matches data
+                    if not found_euro:
+                        if is_gk and not gk_stats.empty:
+                            gk_stats_2526 = gk_stats[gk_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
+                            euro_stats = gk_stats_2526[gk_stats_2526['competition_type'] == 'EUROPEAN_CUP']
+                            if not euro_stats.empty:
+                                found_euro = True
+                                for _, gk_row in euro_stats.iterrows():
+                                    st.markdown(f"**{gk_row['competition_name']}**")
+                                    m1, m2, m3 = st.columns(3)
+                                    m1.metric("Games", int(gk_row.get('games', 0) or 0))
+                                    m2.metric("CS", int(gk_row.get('clean_sheets', 0) or 0))
+                                    m3.metric("GA", int(gk_row.get('goals_against', 0) or 0))
+                        
+                        if not found_euro and not comp_stats.empty:
+                             # Fallback dla graczy z pola lub gdy brak GK stats
+                            comp_stats_2526 = comp_stats[comp_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
+                            euro_stats = comp_stats_2526[comp_stats_2526['competition_type'] == 'EUROPEAN_CUP']
+                            if not euro_stats.empty:
+                                found_euro = True
+                                for _, comp_row in euro_stats.iterrows():
+                                    st.markdown(f"**{comp_row['competition_name']}**")
+                                    m1, m2, m3 = st.columns(3)
+                                    m1.metric("Games", int(comp_row['games'] or 0))
+                                    m2.metric("Goals", 0 if is_gk else int(comp_row['goals'] or 0))
+                                    m3.metric("Assists", int(comp_row['assists'] or 0))
 
                     if not found_euro:
                         # Ważne: pusty write lub info, żeby kontener nie był pusty wizualnie
                         st.markdown("<br><br><p style='text-align:center; color:gray'>No matches played</p>", unsafe_allow_html=True)
 
                 with st.expander("📊 Details"):
-                    details_found = False
-                    row_to_show = None
-                    is_gk_display = False
-                    
-                    if is_gk and not gk_stats.empty:
-                        gk_stats_2526 = gk_stats[gk_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
-                        euro_stats = gk_stats_2526[gk_stats_2526['competition_type'] == 'EUROPEAN_CUP']
-                        if not euro_stats.empty:
-                            row_to_show = euro_stats.iloc[0]
-                            is_gk_display = True
-                            details_found = True
-                    
-                    if not details_found and not comp_stats.empty:
-                        comp_stats_2526 = comp_stats[comp_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
-                        euro_stats = comp_stats_2526[comp_stats_2526['competition_type'] == 'EUROPEAN_CUP']
-                        if not euro_stats.empty:
-                            row_to_show = euro_stats.iloc[0]
-                            is_gk_display = False
-                            details_found = True
-                    
-                    if details_found and row_to_show is not None:
-                        if is_gk_display:
-                            st.write(f"⚽ **Games:** {int(row_to_show.get('games', 0) or 0)}")
-                            st.write(f"🏃 **Starts:** {int(row_to_show.get('games_starts', 0) or 0)}")
-                            st.write(f"⏱️ **Minutes:** {int(row_to_show.get('minutes', 0) or 0):,}")
-                            st.write(f"🧤 **Saves:** {int(row_to_show.get('saves', 0) or 0)}")
-                            st.write(f"🔫 **SoTA:** {int(row_to_show.get('shots_on_target_against', 0) or 0)}")
-                            save_pct = row_to_show.get('save_percentage', None)
-                            if pd.notna(save_pct):
-                                st.write(f"💯 **Save%:** {save_pct:.1f}%")
-                            else:
-                                st.write(f"💯 **Save%:** -")
-                        else:
-                            # Outfield player details - ENHANCED with per 90 metrics
-                            starts = int(row_to_show.get('games_starts', 0) or 0)
-                            minutes = int(row_to_show.get('minutes', 0) or 0)
-                            goals = int(row_to_show.get('goals', 0) or 0)
-                            assists = int(row_to_show.get('assists', 0) or 0)
-                            xg = row_to_show.get('xg', 0.0) if pd.notna(row_to_show.get('xg')) else 0.0
-                            xa = row_to_show.get('xa', 0.0) if pd.notna(row_to_show.get('xa')) else 0.0
-                            npxg = row_to_show.get('npxg', 0.0) if pd.notna(row_to_show.get('npxg')) else 0.0
+                    # Display details for each European competition separately
+                    if euro_competitions_list and not matches_df.empty:
+                        euro_history = get_european_history_by_competition(row['id'], matches_df)
+                        if not euro_history.empty:
+                            euro_2526 = euro_history[euro_history['season'].isin(['2025-2026', '2025/2026'])]
                             
-                            # Calculate xGI
-                            xgi = calculate_xgi(xg, xa)
-                            
-                            # Calculate per 90 metrics
-                            ga_per_90 = calculate_per_90(goals + assists, minutes)
-                            xg_per_90 = calculate_per_90(xg, minutes)
-                            xa_per_90 = calculate_per_90(xa, minutes)
-                            npxg_per_90 = calculate_per_90(npxg, minutes)
-                            xgi_per_90 = calculate_per_90(xgi, minutes)
-                            
-                            # Display stats
-                            st.write(f"🏃 **Starts:** {starts}")
-                            st.write(f"⏱️ **Minutes:** {minutes:,}")
-                            st.write(f"🎯 **Goals:** {goals}")
-                            st.write(f"🅰️ **Assists:** {assists}")
-                            st.write(f"⚡ **G+A / 90:** {ga_per_90:.2f}")
-                            if xgi > 0:
-                                st.write(f"📊 **xGI:** {xgi:.2f}")
-                            if xg > 0:
-                                st.write(f"📊 **xG:** {xg:.2f}")
-                            if xa > 0:
-                                st.write(f"📊 **xA:** {xa:.2f}")
-                            if xg > 0:
-                                st.write(f"📈 **xG / 90:** {xg_per_90:.2f}")
-                            if xa > 0:
-                                st.write(f"📈 **xA / 90:** {xa_per_90:.2f}")
-                            if npxg > 0:
-                                st.write(f"📊 **npxG / 90:** {npxg_per_90:.2f}")
-                            if xgi > 0:
-                                st.write(f"📈 **xGI / 90:** {xgi_per_90:.2f}")
+                            for _, euro_row in euro_2526.iterrows():
+                                st.markdown(f"### {euro_row['competition_name']}")
+                                
+                                starts = int(euro_row.get('games', 0))  # Approximate starts
+                                minutes = int(euro_row.get('minutes', 0))
+                                goals = int(euro_row.get('goals', 0))
+                                assists = int(euro_row.get('assists', 0))
+                                xg = euro_row.get('xg', 0.0) if pd.notna(euro_row.get('xg')) else 0.0
+                                xa = euro_row.get('xa', 0.0) if pd.notna(euro_row.get('xa')) else 0.0
+                                
+                                # Calculate xGI and per 90 metrics
+                                xgi = calculate_xgi(xg, xa)
+                                ga_per_90 = calculate_per_90(goals + assists, minutes)
+                                xg_per_90 = calculate_per_90(xg, minutes)
+                                xa_per_90 = calculate_per_90(xa, minutes)
+                                xgi_per_90 = calculate_per_90(xgi, minutes)
+                                
+                                # Display stats
+                                st.write(f"⏱️ **Minutes:** {minutes:,}")
+                                st.write(f"🎯 **Goals:** {goals}")
+                                st.write(f"🅰️ **Assists:** {assists}")
+                                if minutes > 0:
+                                    st.write(f"⚡ **G+A / 90:** {ga_per_90:.2f}")
+                                if xg > 0:
+                                    st.write(f"📊 **xG:** {xg:.2f}")
+                                if xa > 0:
+                                    st.write(f"📊 **xA:** {xa:.2f}")
+                                if xg > 0 and minutes > 0:
+                                    st.write(f"📈 **xG / 90:** {xg_per_90:.2f}")
+                                if xa > 0 and minutes > 0:
+                                    st.write(f"📈 **xA / 90:** {xa_per_90:.2f}")
+                                
+                                st.write("---")  # Separator between competitions
                     else:
-                        st.write("No matches played")
+                        # Fallback to competition_stats
+                        details_found = False
+                        row_to_show = None
+                        is_gk_display = False
+                        
+                        if is_gk and not gk_stats.empty:
+                            gk_stats_2526 = gk_stats[gk_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
+                            euro_stats = gk_stats_2526[gk_stats_2526['competition_type'] == 'EUROPEAN_CUP']
+                            if not euro_stats.empty:
+                                row_to_show = euro_stats.iloc[0]
+                                is_gk_display = True
+                                details_found = True
+                        
+                        if not details_found and not comp_stats.empty:
+                            comp_stats_2526 = comp_stats[comp_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
+                            euro_stats = comp_stats_2526[comp_stats_2526['competition_type'] == 'EUROPEAN_CUP']
+                            if not euro_stats.empty:
+                                row_to_show = euro_stats.iloc[0]
+                                is_gk_display = False
+                                details_found = True
+                        
+                        if details_found and row_to_show is not None:
+                            if is_gk_display:
+                                st.write(f"⚽ **Games:** {int(row_to_show.get('games', 0) or 0)}")
+                                st.write(f"🏃 **Starts:** {int(row_to_show.get('games_starts', 0) or 0)}")
+                                st.write(f"⏱️ **Minutes:** {int(row_to_show.get('minutes', 0) or 0):,}")
+                                st.write(f"🧤 **Saves:** {int(row_to_show.get('saves', 0) or 0)}")
+                                st.write(f"🔫 **SoTA:** {int(row_to_show.get('shots_on_target_against', 0) or 0)}")
+                                save_pct = row_to_show.get('save_percentage', None)
+                                if pd.notna(save_pct):
+                                    st.write(f"💯 **Save%:** {save_pct:.1f}%")
+                                else:
+                                    st.write(f"💯 **Save%:** -")
+                            else:
+                                # Outfield player details - ENHANCED with per 90 metrics
+                                starts = int(row_to_show.get('games_starts', 0) or 0)
+                                minutes = int(row_to_show.get('minutes', 0) or 0)
+                                goals = int(row_to_show.get('goals', 0) or 0)
+                                assists = int(row_to_show.get('assists', 0) or 0)
+                                xg = row_to_show.get('xg', 0.0) if pd.notna(row_to_show.get('xg')) else 0.0
+                                xa = row_to_show.get('xa', 0.0) if pd.notna(row_to_show.get('xa')) else 0.0
+                                npxg = row_to_show.get('npxg', 0.0) if pd.notna(row_to_show.get('npxg')) else 0.0
+                                
+                                # Calculate xGI
+                                xgi = calculate_xgi(xg, xa)
+                                
+                                # Calculate per 90 metrics
+                                ga_per_90 = calculate_per_90(goals + assists, minutes)
+                                xg_per_90 = calculate_per_90(xg, minutes)
+                                xa_per_90 = calculate_per_90(xa, minutes)
+                                npxg_per_90 = calculate_per_90(npxg, minutes)
+                                xgi_per_90 = calculate_per_90(xgi, minutes)
+                                
+                                # Display stats
+                                st.write(f"🏃 **Starts:** {starts}")
+                                st.write(f"⏱️ **Minutes:** {minutes:,}")
+                                st.write(f"🎯 **Goals:** {goals}")
+                                st.write(f"🅰️ **Assists:** {assists}")
+                                st.write(f"⚡ **G+A / 90:** {ga_per_90:.2f}")
+                                if xgi > 0:
+                                    st.write(f"📊 **xGI:** {xgi:.2f}")
+                                if xg > 0:
+                                    st.write(f"📊 **xG:** {xg:.2f}")
+                                if xa > 0:
+                                    st.write(f"📊 **xA:** {xa:.2f}")
+                                if xg > 0:
+                                    st.write(f"📈 **xG / 90:** {xg_per_90:.2f}")
+                                if xa > 0:
+                                    st.write(f"📈 **xA / 90:** {xa_per_90:.2f}")
+                                if npxg > 0:
+                                    st.write(f"📊 **npxG / 90:** {npxg_per_90:.2f}")
+                                if xgi > 0:
+                                    st.write(f"📈 **xGI / 90:** {xgi_per_90:.2f}")
+                        else:
+                            st.write("No matches played")
                         # --- KOLUMNA 3: DOMESTIC CUPS ---
             with col3:
                 # GÓRA: Statystyki w sztywnym pudełku (wysokość STATS_HEIGHT)
@@ -983,6 +1172,23 @@ if not filtered_df.empty:
             # For goalkeepers, use goalkeeper_stats table; for others, use competition_stats
             is_goalkeeper = str(row.get('position', '')).strip().upper() in ['GK', 'GOALKEEPER', 'BRAMKARZ']
             stats_to_display = gk_stats if (is_goalkeeper and not gk_stats.empty) else comp_stats
+            
+            # ENHANCEMENT: Add European cup stats from player_matches (separate rows for each competition)
+            # This ensures Champions Lg and Europa Lg show as separate rows
+            if not is_goalkeeper and not matches_df.empty:
+                euro_history = get_european_history_by_competition(row['id'], matches_df)
+                if not euro_history.empty and not stats_to_display.empty:
+                    # Remove aggregated EUROPEAN_CUP entries from comp_stats
+                    # and replace with detailed entries from player_matches
+                    stats_to_display = stats_to_display[stats_to_display['competition_type'] != 'EUROPEAN_CUP'].copy()
+                    # Add European stats from player_matches
+                    stats_to_display = pd.concat([stats_to_display, euro_history], ignore_index=True)
+                    # Sort by season and competition_type
+                    stats_to_display = stats_to_display.sort_values(['season', 'competition_type'], ascending=False)
+                elif not euro_history.empty:
+                    # If comp_stats is empty but we have euro_history, use it
+                    stats_to_display = euro_history
+            
             if not stats_to_display.empty and len(stats_to_display) > 0:
                 st.write("---")
                 st.write("**📊 Season Statistics History (All Competitions)**")

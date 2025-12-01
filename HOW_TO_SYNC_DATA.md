@@ -30,7 +30,7 @@ Ten skrypt:
 
 ```bash
 cd polish-players-tracker
-python sync_playwright.py
+python sync_player.py
 ```
 
 ### Metoda 3: Match Logs Sync
@@ -45,7 +45,7 @@ python sync_match_logs.py
 ## ⏱️ Czas Wykonania
 
 - **sync_data.ps1**: ~5-10 minut (wszystkie dane)
-- **sync_playwright.py**: ~10-15 minut (szczegółowe dane)
+- **sync_player.py**: ~10-15 minut (szczegółowe dane)
 - **sync_match_logs.py**: ~2-5 minut (tylko mecze)
 
 ---

@@ -121,8 +121,8 @@ Continue? (yes/no): yes
       python sync_all_playwright.py
 
    2. Or synchronize individual players:
-      python sync_playwright.py "Jakub Moder"
-      python sync_playwright.py "Karol Linetty"
+      python sync_player.py "Jakub Moder"
+      python sync_player.py "Karol Linetty"
       
    3. Check the frontend:
       streamlit run app/frontend/streamlit_app.py
@@ -181,8 +181,8 @@ Continue? (yes/no): yes
 3. Uruchom script (~1 min)
 4. Synchronizuj tylko tych 5: (~2 min)
    ```bash
-   python sync_playwright.py "Jakub Moder"
-   python sync_playwright.py "Karol Linetty"
+   python sync_player.py "Jakub Moder"
+   python sync_player.py "Karol Linetty"
    # ... etc
    ```
 
@@ -203,7 +203,7 @@ Continue? (yes/no): yes
 - **Rozwiązanie:** Zostaw puste `''` - script pominie
 
 ### 3. Po dodaniu ID:
-- **MUSISZ** zsynchronizować gracza: `python sync_playwright.py "Imię Nazwisko"`
+- **MUSISZ** zsynchronizować gracza: `python sync_player.py "Imię Nazwisko"`
 - LUB czekać na automatyczną synchronizację (scheduler)
 
 ---
@@ -316,7 +316,7 @@ python add_fbref_ids.py
 # Wpisz: yes
 
 # 4. Synchronizuj
-python sync_playwright.py "Jakub Moder"
+python sync_player.py "Jakub Moder"
 
 # 5. Sprawdź w aplikacji
 streamlit run app/frontend/streamlit_app.py

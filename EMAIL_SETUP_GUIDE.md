@@ -256,7 +256,7 @@ python tmp_rovodev_test_email.py
 
 Gdy testujesz synchronizację, użyj:
 ```bash
-python sync_playwright.py --visible Lewandowski
+python sync_player.py --visible Lewandowski
 ```
 To otworzy przeglądarkę i zobaczysz co się dzieje.
 

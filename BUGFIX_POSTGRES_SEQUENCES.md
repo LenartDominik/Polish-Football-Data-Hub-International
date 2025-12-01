@@ -21,7 +21,7 @@ W PostgreSQL sekwencje auto-incrementu (sequences) nie są automatycznie resetow
 Dodano funkcję `reset_sequences_if_needed()` do następujących skryptów:
 - ✅ `sync_player_full.py` - pełna synchronizacja gracza
 - ✅ `sync_match_logs.py` - synchronizacja match logs
-- ✅ `sync_playwright.py` - główny skrypt synchronizacji
+- ✅ `sync_player.py` - główny skrypt synchronizacji
 
 Funkcja automatycznie resetuje sekwencje PostgreSQL po usunięciu danych:
 
@@ -67,8 +67,8 @@ python sync_player_full.py "Karol Świderski" --all-seasons
 python sync_match_logs.py "Robert Lewandowski" --season 2024-2025
 
 # Główny skrypt synchronizacji (wszystkie gracze lub pojedynczy)
-python sync_playwright.py --all-seasons
-python sync_playwright.py --player "Zieliński"
+python sync_player.py --all-seasons
+python sync_player.py --player "Zieliński"
 ```
 
 Wszystkie skrypty automatycznie resetują sekwencje podczas działania.

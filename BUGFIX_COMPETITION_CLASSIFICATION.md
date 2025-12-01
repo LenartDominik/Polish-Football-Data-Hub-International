@@ -12,7 +12,7 @@
 Funkcja `get_competition_type()` w trzech plikach:
 - `app/backend/main.py`
 - `sync_competition_stats.py`
-- `sync_playwright.py`
+- `sync_player.py`
 
 Miała problemy:
 1. Brak "conf lg" w liście rozgrywek europejskich
@@ -64,7 +64,7 @@ Wykonano skrypt: tmp_rovodev_fix_db_classifications.py
 ## Pliki zmienione
 - ✅ `polish-players-tracker/app/backend/main.py` - funkcja `get_competition_type()`
 - ✅ `polish-players-tracker/sync_competition_stats.py` - funkcja `get_competition_type()`
-- ✅ `polish-players-tracker/sync_playwright.py` - funkcja `get_competition_type()`
+- ✅ `polish-players-tracker/sync_player.py` - funkcja `get_competition_type()`
 
 ## Testy
 Wszystkie testy przeszły pomyślnie:

@@ -89,7 +89,7 @@ All player statistics in this application are sourced from **[FBref.com](https:/
 - **Dedykowane statystyki bramkarzy**
 
 ### 🔄 Synchronizacja danych
-- **CLI Scripts**: `sync_playwright.py`, `sync_all_playwright.py`, `sync_match_logs.py`
+- **CLI Scripts**: `sync_player.py`, `sync_all_playwright.py`, `sync_match_logs.py`
 - **Automatyczny scheduler**: synchronizacja w tle
   - Statystyki graczy: poniedziałek i czwartek 6:00
   - Szczegółowe matchlogi: wtorek 7:00
@@ -214,7 +214,7 @@ SCHEDULER_TIMEZONE=Europe/Warsaw
 - 📅 **Czwartek 6:00** - po Lidze Mistrzów (środa)
 
 **Co synchronizuje:**
-- ✅ Statystyki sezonu 2025-2026 dla wszystkich graczy
+- ✅ Competition stats i match logs sezonu 2025-2026 dla wszystkich graczy
 - ✅ Liga krajowa + Puchary Europejskie + Reprezentacja
 - ✅ Rate limiting: 12 sekund między każdym graczem
 - ✅ Email z raportem po zakończeniu (opcjonalnie)
@@ -232,14 +232,17 @@ SCHEDULER_TIMEZONE=Europe/Warsaw
 #### Synchronizacja pojedynczego gracza
 
 ```powershell
-# Zsynchronizuj gracza z FBref
-python sync_playwright.py "Robert Lewandowski"
+# Zsynchronizuj gracza dla obecnego sezonu (2025-2026)
+python sync_player.py "Robert Lewandowski"
 
 # Z pełną historią wszystkich sezonów
-python sync_playwright.py "Robert Lewandowski" --all-seasons
+python sync_player.py "Robert Lewandowski" --all-seasons
+
+# Konkretny sezon
+python sync_player.py "Robert Lewandowski" --season=2024-2025
 
 # Zobacz przeglądarkę (debug mode)
-python sync_playwright.py "Robert Lewandowski" --visible
+python sync_player.py "Robert Lewandowski" --visible
 ```
 
 #### Synchronizacja wszystkich graczy
@@ -258,11 +261,14 @@ python sync_all_playwright.py "Lewandowski" "Zieliński" "Szczęsny"
 #### Synchronizacja szczegółów meczów (matchlogs)
 
 ```powershell
-# Zsynchronizuj matchlogs dla gracza (sezon 2025-2026)
+# Zsynchronizuj matchlogs dla gracza (obecny sezon 2025-2026)
 python sync_match_logs.py "Robert Lewandowski"
 
-# Dla innego sezonu
+# Dla konkretnego sezonu
 python sync_match_logs.py "Robert Lewandowski" --season 2024-2025
+
+# Pełna synchronizacja (competition stats + match logs wszystkich sezonów)
+python sync_player_full.py "Robert Lewandowski"
 ```
 
 **Co synchronizuje matchlogs:**
@@ -345,9 +351,10 @@ polish-players-tracker/
 ├── start_backend.ps1             # Uruchom backend
 ├── start_frontend.ps1            # Uruchom frontend
 │
-├── sync_playwright.py            # Sync pojedynczego gracza
+├── sync_player.py               # Sync gracza (obecny sezon: stats+matchlogs)
+├── sync_player_full.py           # Sync gracza (wszystkie sezony: stats+matchlogs)
 ├── sync_all_playwright.py        # Sync wszystkich graczy
-├── sync_match_logs.py            # Sync szczegółów meczów (matchlogs)
+├── sync_match_logs.py            # Sync tylko matchlogs (obecny sezon)
 ├── sync_missing_players.py       # Sync graczy bez danych
 ├── add_piatek_manual.py          # Ręczne dodanie gracza
 ├── quick_add_player.py           # Szybkie dodanie gracza
@@ -430,7 +437,7 @@ python quick_add_player.py "Krzysztof Piątek" "Istanbul Basaksehir" "Super Lig"
 **Ta komenda:**
 1. Dodaje gracza do bazy
 2. Synchronizuje statystyki sezonowe (wszystkie sezony)
-3. Synchronizuje matchlogs (sezon 2025-2026)
+3. Synchronizuje matchlogs (obecny sezon 2025-2026)
 
 #### Ręczne dodanie przez kod (dla deweloperów)
 ```powershell
@@ -455,7 +462,7 @@ python tools/check_reqs.py
 
 | Co chcesz zrobić | Komenda |
 |------------------|---------|
-| 🔄 Zsynchronizuj gracza | `python sync_playwright.py "Lewandowski"` |
+| 🔄 Zsynchronizuj gracza | `python sync_player.py "Lewandowski"` |
 | 📊 Sync wszystkich | `python sync_all_playwright.py` |
 | 🎯 Sync matchlogs | `python sync_match_logs.py "Lewandowski"` |
 | 📅 Sync graczy bez danych | `python sync_missing_players.py` |
@@ -466,12 +473,14 @@ python tools/check_reqs.py
 
 | Co chcesz zrobić | Komenda | Czas |
 |------------------|---------|------|
-| 📊 Zaktualizuj gracza (szybko) | `python sync_playwright.py "Nazwisko"` | ~15s |
-| 📚 Pełna historia gracza | `python sync_playwright.py "Nazwisko" --all-seasons` | ~30-60s |
-| 👥 Wszyscy gracze (szybko) | `python sync_all_playwright.py` | ~20 min |
-| 👥 Wszyscy gracze (pełna historia) | `python sync_all_playwright.py --all-seasons` | ~2-3h |
-| 🏆 Szczegóły meczów | `python sync_match_logs.py "Nazwisko"` | ~15s |
-| 🏆 Szczegóły meczów (inny sezon) | `python sync_match_logs.py "Nazwisko" --season 2024-2025` | ~15s |
+| 📊 Zaktualizuj gracza (obecny sezon 2025-2026) | `python sync_player.py "Nazwisko"` | ~15s |
+| 📚 Pełna historia gracza (wszystkie sezony) | `python sync_player.py "Nazwisko" --all-seasons` | ~30-60s |
+| 🎯 Konkretny sezon | `python sync_player.py "Nazwisko" --season=2024-2025` | ~15s |
+| 👥 Wszyscy gracze (obecny sezon) | `python sync_all_playwright.py` | ~20 min |
+| 👥 Wszyscy gracze (wszystkie sezony) | `python sync_all_playwright.py --all-seasons` | ~2-3h |
+| 🏆 Szczegóły meczów (obecny sezon) | `python sync_match_logs.py "Nazwisko"` | ~15s |
+| 🚀 Kompletna synchronizacja (wszystkie sezony) | `python sync_player_full.py "Nazwisko"` | ~60s |
+| 🏆 Szczegóły meczów (poprzedni sezon) | `python sync_match_logs.py "Nazwisko" --season 2024-2025` | ~15s |
 
 ### Dodawanie graczy
 
@@ -632,10 +641,10 @@ python -m playwright install-deps chromium  # Linux: zainstaluj system dependenc
 # Backend wyświetla szczegółowe logi w konsoli
 
 # Przetestuj pojedynczego gracza
-python sync_playwright.py "Robert Lewandowski" --visible
+python sync_player.py "Robert Lewandowski" --visible
 
 # Debug mode z widoczną przeglądarką
-python sync_playwright.py "Lewandowski" --visible
+python sync_player.py "Lewandowski" --visible
 ```
 
 ### PostgreSQL: "duplicate key value violates unique constraint"
@@ -646,7 +655,7 @@ python fix_postgres_sequences.py
 # Problem rozwiązany automatycznie w skryptach:
 # - sync_player_full.py
 # - sync_match_logs.py  
-# - sync_playwright.py
+# - sync_player.py
 
 # Więcej info: BUGFIX_POSTGRES_SEQUENCES.md
 ```

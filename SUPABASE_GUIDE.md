@@ -17,23 +17,23 @@
 
 #### **1. Synchronizacja wszystkich graczy:**
 ```powershell
-python sync_playwright.py
+python sync_player.py
 ```
 
 #### **2. Synchronizacja konkretnych graczy:**
 ```powershell
-python sync_playwright.py "Robert Lewandowski"
-python sync_playwright.py "Lewandowski" "Zieliński"
+python sync_player.py "Robert Lewandowski"
+python sync_player.py "Lewandowski" "Zieliński"
 ```
 
 #### **3. Synchronizacja z wszystkimi sezonami:**
 ```powershell
-python sync_playwright.py --all-seasons
+python sync_player.py --all-seasons
 ```
 
 #### **4. Synchronizacja widoczna (bez headless):**
 ```powershell
-python sync_playwright.py --visible
+python sync_player.py --visible
 ```
 
 ### **Nowe opcje:**
@@ -43,7 +43,7 @@ python sync_playwright.py --visible
 python sync_playwright.py --season=2024-2025
 
 # Synchronizacja z ID (bez wyszukiwania)
-python sync_playwright.py --use-id
+python sync_player.py --use-id
 ```
 
 ---
@@ -135,12 +135,12 @@ streamlit run app/frontend/streamlit_app.py
 
 1. **Zsynchronizuj więcej graczy do Supabase:**
    ```powershell
-   python sync_playwright.py
+   python sync_player.py
    ```
 
 2. **Lub zsynchronizuj konkretnych graczy:**
    ```powershell
-   python sync_playwright.py "Zieliński" "Szczęsny"
+   python sync_player.py "Zieliński" "Szczęsny"
    ```
 
 3. **Sprawdź dane w frontend:**
@@ -223,12 +223,12 @@ python -c "from app.backend.database import SessionLocal; from app.backend.model
 
 ### **Szybka synchronizacja 5 graczy (test):**
 ```powershell
-python sync_playwright.py "Lewandowski" "Zieliński" "Szczęsny" "Fabiański" "Cash"
+python sync_player.py "Lewandowski" "Zieliński" "Szczęsny" "Fabiański" "Cash"
 ```
 
 ### **Synchronizacja tylko aktualnego sezonu:**
 ```powershell
-python sync_playwright.py --season=2024-2025
+python sync_player.py --season=2024-2025
 ```
 
 ### **Sprawdzenie co jest w bazie:**

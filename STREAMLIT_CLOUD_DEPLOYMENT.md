@@ -78,7 +78,7 @@ Ten przewodnik pokazuje jak wdrożyć **Polish Players Tracker** na Streamlit Cl
 │                            │                                │
 │                            ▼                                │
 │  ┌───────────────────────────────────────────────────────┐ │
-│  │  Playwright Scraper (sync_playwright.py)              │ │
+│  │  Playwright Scraper (sync_player.py)              │ │
 │  │  - Scraping FBref.com co 6h                           │ │
 │  │  - Aktualizacja statystyk                             │ │
 │  └───────────────────────────────────────────────────────┘ │
@@ -413,7 +413,7 @@ git push origin main
 1. SSH do Render (Render Dashboard → Shell)
 2. Uruchom sync:
    ```bash
-   python sync_playwright.py
+   python sync_player.py
    ```
 3. Lub poczekaj na automatyczny scraping (co 6h)
 

@@ -165,7 +165,7 @@ def get_all_matches(db: Session = Depends(get_db)):
 #    - POST /fbref/sync-all
 #
 # These have been replaced by:
-# - sync_playwright.py (for individual player sync)
+# - sync_player.py (for individual player sync)
 # - sync_all_playwright.py (for bulk sync)
 # These scripts write directly to competition_stats and goalkeeper_stats tables.
 #

@@ -92,7 +92,7 @@ switch ($Action) {
         
         Write-Host ""
         
-        python sync_playwright.py @args
+        python sync_player.py @args
     }
     
     'syncall' {

@@ -344,7 +344,14 @@ Backend **NIE** posiada endpointów do synchronizacji. Zamiast tego użyj skrypt
 
 ### Synchronizacja pojedynczego gracza:
 ```powershell
-python sync_playwright.py "Robert Lewandowski"
+# Obecny sezon (2025-2026) - competition stats + match logs
+python sync_player.py "Robert Lewandowski"
+
+# Konkretny sezon
+python sync_player.py "Robert Lewandowski" --season=2024-2025
+
+# Wszystkie sezony
+python sync_player.py "Robert Lewandowski" --all-seasons
 ```
 
 ### Synchronizacja wszystkich graczy:
@@ -448,7 +455,7 @@ python -m playwright install chromium
 
 - **Frontend Dashboard:** `app/frontend/` (Streamlit)
 - **Baza danych:** `players.db` (katalog główny)
-- **Skrypty synchronizacji:** `sync_playwright.py`, `sync_all_playwright.py`
+- **Skrypty synchronizacji:** `sync_player.py`, `sync_all_playwright.py`
 - **Dokumentacja główna:** `README.md` (katalog główny)
 - **Legal Notice:** `LEGAL_NOTICE.md` (katalog główny) ⚠️
 - **API Docs:** `API_DOCUMENTATION.md` (katalog główny)
