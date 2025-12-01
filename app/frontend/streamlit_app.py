@@ -1177,6 +1177,21 @@ if not filtered_df.empty:
             # This ensures Champions Lg and Europa Lg show as separate rows
             if not is_goalkeeper and not matches_df.empty:
                 euro_history = get_european_history_by_competition(row['id'], matches_df)
+                
+                # DEBUG OUTPUT
+                if row['name'] and 'Szymański' in row['name']:
+                    st.write("🔍 DEBUG: Processing Szymański")
+                    st.write(f"- matches_df empty: {matches_df.empty}")
+                    st.write(f"- matches_df size: {len(matches_df)}")
+                    st.write(f"- euro_history empty: {euro_history.empty}")
+                    if not euro_history.empty:
+                        st.write(f"- euro_history size: {len(euro_history)}")
+                        st.write("Euro history data:")
+                        st.dataframe(euro_history[['season', 'competition_name', 'games', 'goals', 'assists', 'minutes']])
+                    st.write(f"- stats_to_display (comp_stats) empty: {stats_to_display.empty}")
+                    if not stats_to_display.empty:
+                        st.write(f"- stats_to_display size: {len(stats_to_display)}")
+                
                 if not euro_history.empty and not stats_to_display.empty:
                     # Remove aggregated EUROPEAN_CUP entries from comp_stats
                     # and replace with detailed entries from player_matches
@@ -1185,6 +1200,16 @@ if not filtered_df.empty:
                     stats_to_display = pd.concat([stats_to_display, euro_history], ignore_index=True)
                     # Sort by season and competition_type
                     stats_to_display = stats_to_display.sort_values(['season', 'competition_type'], ascending=False)
+                    
+                    # DEBUG OUTPUT
+                    if row['name'] and 'Szymański' in row['name']:
+                        st.write("✅ After merge:")
+                        st.write(f"- stats_to_display size: {len(stats_to_display)}")
+                        szymanski_2526 = stats_to_display[stats_to_display['season'].isin(['2025-2026', '2025/2026'])]
+                        st.write(f"- 2025-2026 records: {len(szymanski_2526)}")
+                        if not szymanski_2526.empty:
+                            st.write("2025-2026 data:")
+                            st.dataframe(szymanski_2526[['season', 'competition_type', 'competition_name', 'games', 'goals', 'assists']])
                 elif not euro_history.empty:
                     # If comp_stats is empty but we have euro_history, use it
                     stats_to_display = euro_history
