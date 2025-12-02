@@ -611,6 +611,12 @@ Email:    SendGrid (darmowe 100/dzień)
 
 ## 🐛 Rozwiązywanie problemów
 
+### 📚 Dedykowane Przewodniki Troubleshooting
+
+- **[TROUBLESHOOTING_DATABASE.md](TROUBLESHOOTING_DATABASE.md)** - Problemy z połączeniem do bazy danych (Supabase, Render)
+- **[SCHEDULER_STATUS_GUIDE.md](SCHEDULER_STATUS_GUIDE.md)** - Monitoring i konfiguracja automatycznej synchronizacji
+- **[EMAIL_SETUP_GUIDE.md](EMAIL_SETUP_GUIDE.md)** - Konfiguracja powiadomień email dla schedulera
+
 ### Backend nie startuje
 ```powershell
 # Sprawdź czy port 8000 jest wolny
@@ -659,6 +665,17 @@ python fix_postgres_sequences.py
 
 # Więcej info: BUGFIX_POSTGRES_SEQUENCES.md
 ```
+
+### Database Connection Issues (Render/Supabase)
+
+**Problem:** `password authentication failed` lub `connection refused`
+
+**Szybkie rozwiązanie:**
+1. Sprawdź `DATABASE_URL` w Render Environment
+2. Sprawdź format: `postgresql://postgres.PROJECT_REF:PASSWORD@...`
+3. Sprawdź hasło w Supabase Dashboard
+
+**Pełny przewodnik:** [TROUBLESHOOTING_DATABASE.md](TROUBLESHOOTING_DATABASE.md)
 
 ### Scheduler nie działa
 ```powershell

@@ -2,7 +2,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from .config import settings
-import re
 
 # Ensure we use a synchronous DBAPI driver for SQLAlchemy's sync engine.
 # If the DATABASE_URL contains an async driver like '+aiosqlite', replace
@@ -16,29 +15,6 @@ if not database_url:
         "Example: DATABASE_URL=postgresql://user:pass@host:port/db\n"
         "See SUPABASE_GUIDE.md for setup instructions."
     )
-
-# DEBUG: Log connection string format (without password)
-def mask_password(url: str) -> str:
-    """Mask password in connection string for logging"""
-    return re.sub(r'://([^:]+):([^@]+)@', r'://\1:****@', url)
-
-print(f"[DATABASE] Connection URL format: {mask_password(database_url)}")
-
-# Extract and log connection details
-if database_url.startswith(('postgresql', 'postgres')):
-    match = re.search(r'://([^:]+):([^@]+)@([^:]+):(\d+)/(.+?)(\?|$)', database_url)
-    if match:
-        username, _, host, port, dbname = match.groups()[:5]
-        print(f"[DATABASE] User: {username}")
-        print(f"[DATABASE] Host: {host}")
-        print(f"[DATABASE] Port: {port}")
-        print(f"[DATABASE] Database: {dbname}")
-        
-        # Check for Transaction Pooler issues
-        if port == "6543" and username == "postgres":
-            print("⚠️  [DATABASE] WARNING: Using Transaction Pooler (port 6543) with username 'postgres'")
-            print("⚠️  [DATABASE] Transaction Pooler usually requires format: postgres.PROJECT_REF")
-            print("⚠️  [DATABASE] If authentication fails, check your DATABASE_URL format")
 if "+aiosqlite" in database_url:
     database_url = database_url.replace("+aiosqlite", "")
 
