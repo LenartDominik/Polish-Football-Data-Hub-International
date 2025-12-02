@@ -672,7 +672,8 @@ class FBrefPlaywrightScraper:
         return name
 
     def _merge_goalkeeper_stats(self, stats: list, gk_stats: list) -> list:
-        """Merge advanced goalkeeper stats into main competition stats by season and normalized competition name (force update all advanced fields)"""
+        """Merge advanced goalkeeper stats into main competition stats by season and normalized competition name 
+        IMPORTANT: Preserve minutes from standard table (don't overwrite with GK table which often has None/0)"""
         import logging
         logger = logging.getLogger(__name__)
         logger.info(f"[MERGE_DEBUG] gk_stats: {gk_stats}")
@@ -685,8 +686,18 @@ class FBrefPlaywrightScraper:
                 stat_season = stat.get('season')
                 stat_comp = self._normalize_competition_name(stat.get('competition_name'))
                 if stat_season == gk_season and stat_comp == gk_comp:
+                    # Preserve minutes from standard table if it exists and is not 0/None
+                    existing_minutes = stat.get('minutes')
+                    
+                    # Merge all goalkeeper stats
                     for k, v in gk.items():
                         stat[k] = v
+                    
+                    # Restore minutes from standard table if GK table had None/0 and standard had valid data
+                    if existing_minutes and (not stat.get('minutes') or stat.get('minutes') == 0):
+                        stat['minutes'] = existing_minutes
+                        logger.info(f"✅ Preserved minutes={existing_minutes} from standard table for {gk_season} {gk.get('competition_name')}")
+                    
                     matched = True
                     break
             if not matched:

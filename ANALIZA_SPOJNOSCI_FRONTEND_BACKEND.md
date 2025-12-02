@@ -243,7 +243,7 @@ season_display.loc[mask_missing_minutes, 'minutes'] = 'N/A'
 
 #### `.env`:
 ```bash
-DATABASE_URL=postgresql://postgres.cjlloazwflaewfpojwrw:...@aws-1-eu-west-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.xxx:...@aws-1-eu-west-1.pooler.supabase.com:6543/postgres
 API_BASE_URL=http://localhost:8000  # Opcjonalne - domyślnie localhost:8000
 ```
 
@@ -265,7 +265,7 @@ streamlit run app/frontend/streamlit_app.py
 #### Backend (Render.com):
 **Environment Variables:**
 ```bash
-DATABASE_URL=postgresql://postgres.cjlloazwflaewfpojwrw:...@aws-1-eu-west-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.xxxx:...@aws-1-eu-west-1.pooler.supabase.com:6543/postgres
 ```
 
 **Deployment:** Automatyczny z GitHub (render.yaml)
