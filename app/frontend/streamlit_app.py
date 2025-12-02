@@ -177,11 +177,12 @@ def get_european_history_by_competition(player_id, matches_df):
     Get European cup statistics grouped by season and competition from player_matches.
     Returns separate rows for Champions Lg, Europa Lg, etc.
     This is needed because FBref aggregates them in competition_stats.
+    Supports both outfield players (goals/assists) and goalkeepers (CS/GA).
     """
     if matches_df.empty:
         return pd.DataFrame()
     
-    required_columns = ['player_id', 'match_date', 'competition', 'minutes_played', 'goals', 'assists']
+    required_columns = ['player_id', 'match_date', 'competition', 'minutes_played']
     if not all(col in matches_df.columns for col in required_columns):
         return pd.DataFrame()
     
@@ -217,31 +218,74 @@ def get_european_history_by_competition(player_id, matches_df):
     if euro_matches.empty:
         return pd.DataFrame()
     
-    # Group by season and competition
-    grouped = euro_matches.groupby(['season', 'competition']).agg({
+    # Prepare aggregation dict - include all possible columns
+    agg_dict = {
         'match_date': 'count',  # games
-        'goals': 'sum',
-        'assists': 'sum',
-        'minutes_played': 'sum',
-        'xg': 'sum',
-        'xa': 'sum',
-        'shots': 'sum',
-        'shots_on_target': 'sum',
-        'yellow_cards': 'sum',
-        'red_cards': 'sum'
-    }).reset_index()
+        'minutes_played': 'sum'
+    }
+    
+    # Add outfield player stats if available
+    if 'goals' in euro_matches.columns:
+        agg_dict['goals'] = 'sum'
+    if 'assists' in euro_matches.columns:
+        agg_dict['assists'] = 'sum'
+    if 'xg' in euro_matches.columns:
+        agg_dict['xg'] = 'sum'
+    if 'xa' in euro_matches.columns:
+        agg_dict['xa'] = 'sum'
+    if 'shots' in euro_matches.columns:
+        agg_dict['shots'] = 'sum'
+    if 'shots_on_target' in euro_matches.columns:
+        agg_dict['shots_on_target'] = 'sum'
+    if 'yellow_cards' in euro_matches.columns:
+        agg_dict['yellow_cards'] = 'sum'
+    if 'red_cards' in euro_matches.columns:
+        agg_dict['red_cards'] = 'sum'
+    
+    # Add goalkeeper stats if available
+    if 'goals_against' in euro_matches.columns:
+        agg_dict['goals_against'] = 'sum'
+    if 'shots_on_target_against' in euro_matches.columns:
+        agg_dict['shots_on_target_against'] = 'sum'
+    if 'saves' in euro_matches.columns:
+        agg_dict['saves'] = 'sum'
+    if 'clean_sheet' in euro_matches.columns:
+        agg_dict['clean_sheet'] = 'sum'
+    
+    # Group by season and competition
+    grouped = euro_matches.groupby(['season', 'competition']).agg(agg_dict).reset_index()
     
     # Rename columns
-    grouped.columns = ['season', 'competition_name', 'games', 'goals', 'assists', 'minutes', 
-                       'xg', 'xa', 'shots', 'shots_on_target', 'yellow_cards', 'red_cards']
+    new_columns = ['season', 'competition_name', 'games', 'minutes']
+    
+    # Add other columns in order
+    for col in ['goals', 'assists', 'xg', 'xa', 'shots', 'shots_on_target', 
+                'yellow_cards', 'red_cards', 'goals_against', 'shots_on_target_against', 
+                'saves', 'clean_sheet']:
+        if col in grouped.columns:
+            new_columns.append(col)
+    
+    grouped.columns = new_columns
+    
+    # Rename clean_sheet to clean_sheets for consistency
+    if 'clean_sheet' in grouped.columns:
+        grouped = grouped.rename(columns={'clean_sheet': 'clean_sheets'})
     
     # Add competition_type
     grouped['competition_type'] = 'EUROPEAN_CUP'
     
+    # Fill missing columns with 0
+    for col in ['goals', 'assists', 'xg', 'xa', 'shots', 'shots_on_target', 
+                'yellow_cards', 'red_cards', 'goals_against', 'shots_on_target_against', 
+                'saves', 'clean_sheets']:
+        if col not in grouped.columns:
+            grouped[col] = 0
+    
     # Reorder columns to match comp_stats format
     grouped = grouped[['season', 'competition_type', 'competition_name', 'games', 'goals', 
                        'assists', 'xg', 'xa', 'shots', 'shots_on_target', 'yellow_cards', 
-                       'red_cards', 'minutes']]
+                       'red_cards', 'minutes', 'goals_against', 'shots_on_target_against', 
+                       'saves', 'clean_sheets']]
     
     return grouped
 
@@ -506,8 +550,13 @@ if not filtered_df.empty:
                                     st.markdown(f"**{euro_row['competition_name']}**")
                                     m1, m2, m3 = st.columns(3)
                                     m1.metric("Games", int(euro_row['games']))
-                                    m2.metric("Goals", 0 if is_gk else int(euro_row['goals']))
-                                    m3.metric("Assists", int(euro_row['assists']))
+                                    if is_gk:
+                                        # For goalkeepers: CS and GA (not goals/assists)
+                                        m2.metric("CS", int(euro_row.get('clean_sheets', 0)))
+                                        m3.metric("GA", int(euro_row.get('goals_against', 0)))
+                                    else:
+                                        m2.metric("Goals", int(euro_row['goals']))
+                                        m3.metric("Assists", int(euro_row['assists']))
                                     euro_competitions_list.append(euro_row['competition_name'])
                     
                     # Fallback to competition_stats if no player_matches data
@@ -925,7 +974,11 @@ if not filtered_df.empty:
                     if is_gk and not gk_stats.empty:
                         # BUGFIX: Only use full season format '2025-2026', NOT single years '2025' or '2026'
                         # Single years would incorrectly match '2024-2025' (contains '2025')
-                        gk_stats_2526 = gk_stats[gk_stats['season'].isin(['2025-2026', '2025/2026'])]
+                        # IMPORTANT: Exclude NATIONAL_TEAM here - it will be added in KROK 2.6
+                        gk_stats_2526 = gk_stats[
+                            (gk_stats['season'].isin(['2025-2026', '2025/2026'])) &
+                            (gk_stats['competition_type'] != 'NATIONAL_TEAM')
+                        ]
                         if not gk_stats_2526.empty:
                             # Dane podstawowe (mecze, minuty, starty)
                             total_games = gk_stats_2526['games'].sum()
@@ -937,11 +990,15 @@ if not filtered_df.empty:
                             total_saves = gk_stats_2526['saves'].sum()
                             total_sota = gk_stats_2526['shots_on_target_against'].sum()
                     
-                    # KROK 2: Jeśli NIE bramkarz (lub brak danych GK), sumuj z comp_stats
-                    elif not comp_stats.empty:
+                    # KROK 2: Jeśli NIE bramkarz, sumuj z comp_stats (dla graczy z pola)
+                    if not is_gk and not comp_stats.empty:
                         # BUGFIX: Only use full season format '2025-2026', NOT single years '2025' or '2026'
                         # Single years would incorrectly match '2024-2025' (contains '2025')
-                        comp_stats_2526 = comp_stats[comp_stats['season'].isin(['2025-2026', '2025/2026'])]
+                        # IMPORTANT: Exclude NATIONAL_TEAM here - it will be added in KROK 2.6
+                        comp_stats_2526 = comp_stats[
+                            (comp_stats['season'].isin(['2025-2026', '2025/2026'])) &
+                            (comp_stats['competition_type'] != 'NATIONAL_TEAM')
+                        ]
                         if not comp_stats_2526.empty:
                             total_games = comp_stats_2526['games'].sum()
                             total_starts = comp_stats_2526['games_starts'].sum()
@@ -977,6 +1034,50 @@ if not filtered_df.empty:
                                 total_minutes += minutes_diff
                                 total_goals += max(0, euro_stats['goals'] - (euro_comps_in_comp_stats['goals'].sum() if not euro_comps_in_comp_stats.empty else 0))
                                 total_assists += max(0, euro_stats['assists'] - (euro_comps_in_comp_stats['assists'].sum() if not euro_comps_in_comp_stats.empty else 0))
+                    
+                    # KROK 2.6: Add National Team stats for 2025-2026 season
+                    # National team uses calendar year 2025, which falls within 2025-2026 season
+                    # IMPORTANT: Add for both goalkeepers and outfield players
+                    # For GK: check goalkeeper_stats first, then comp_stats
+                    # For outfield: check comp_stats
+                    national_stats_2526 = pd.DataFrame()
+                    
+                    if is_gk and not gk_stats.empty:
+                        # For goalkeepers, check goalkeeper_stats for national team data
+                        gk_stats_nat = gk_stats[gk_stats['season'].isin(['2025-2026', '2025/2026', '2026', 2026, '2025', 2025])]
+                        national_stats_2526 = gk_stats_nat[gk_stats_nat['competition_type'] == 'NATIONAL_TEAM']
+                    
+                    if national_stats_2526.empty and not comp_stats.empty:
+                        # Fallback to comp_stats if not found in goalkeeper_stats
+                        comp_stats_nat = comp_stats[comp_stats['season'].isin(['2025-2026', '2025/2026', '2026', 2026, '2025', 2025])]
+                        national_stats_2526 = comp_stats_nat[comp_stats_nat['competition_type'] == 'NATIONAL_TEAM']
+                    
+                    if not national_stats_2526.empty:
+                        # Add national team stats to totals
+                        total_games += national_stats_2526['games'].sum()
+                        total_starts += national_stats_2526['games_starts'].sum()
+                        total_minutes += national_stats_2526['minutes'].sum()
+                        
+                        if is_gk:
+                            # For goalkeepers, add GK-specific stats
+                            if 'clean_sheets' in national_stats_2526.columns:
+                                total_clean_sheets += national_stats_2526['clean_sheets'].sum()
+                            if 'goals_against' in national_stats_2526.columns:
+                                total_ga += national_stats_2526['goals_against'].sum()
+                            if 'saves' in national_stats_2526.columns:
+                                total_saves += national_stats_2526['saves'].sum()
+                            if 'shots_on_target_against' in national_stats_2526.columns:
+                                total_sota += national_stats_2526['shots_on_target_against'].sum()
+                        else:
+                            # For outfield players, add goals/assists/xG
+                            total_goals += national_stats_2526['goals'].sum()
+                            total_assists += national_stats_2526['assists'].sum()
+                            total_xg += national_stats_2526['xg'].sum()
+                            total_xa += national_stats_2526['xa'].sum()
+                            total_shots += national_stats_2526['shots'].sum()
+                            total_sot += national_stats_2526['shots_on_target'].sum()
+                            total_yellow += national_stats_2526['yellow_cards'].sum()
+                            total_red += national_stats_2526['red_cards'].sum()
 
                     # KROK 3: Wyświetl metryki na bazie zagregowanych danych
                     m1, m2, m3 = st.columns(3)
