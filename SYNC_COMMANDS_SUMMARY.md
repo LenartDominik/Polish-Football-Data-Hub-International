@@ -4,61 +4,46 @@
 
 ## 🚀 **Najważniejsze zmiany:**
 
-### ✅ **Naprawiono `sync_playwright.py` → `sync_player.py`**
-- **Przed:** Tylko competition stats (duplikował spotkania)
-- **Teraz:** Competition stats + match logs (bez duplikatów)
-- **Przemianowano** dla lepszej czytelności
+### ✅ **Uproszczono system synchronizacji**
+- **Usunięto:** Stare, nieużywane skrypty (`sync_player.py`, `sync_all_playwright.py`, `quick_add_player.py`)
+- **Pozostawiono:** Tylko 2 komendy + automatyczny scheduler
+- **Czystszy projekt:** Bez zbędnych plików
 
-### ✅ **Zaktualizowano dokumentację**
-- 25+ plików .md zaktualizowanych
-- README.md, instrukcje, przewodniki
-- API docs (/docs, /redoc) - już aktualne
+### ✅ **Automatyczny scheduler**
+- Synchronizacja wszystkich graczy 3x w tygodniu
+- Email powiadomienia po każdej synchronizacji
+- Cron-job.org budzi backend przed synchronizacją
 
 ---
 
-## 📋 **WSZYSTKIE DOSTĘPNE KOMENDY**
+## 📋 **DOSTĘPNE KOMENDY**
 
-### **1. Synchronizacja gracza - obecny sezon (GŁÓWNA)**
+### **1. Pełna synchronizacja (wszystkie sezony)**
 ```powershell
-python sync_player.py "Jakub Kamiński"
-```
-**✅ Zwraca:** Competition stats + match logs dla sezonu 2025-2026
-
-### **2. Synchronizacja gracza - konkretny sezon**
-```powershell
-python sync_player.py "Jakub Kamiński" --season=2024-2025
-```
-**✅ Zwraca:** Competition stats + match logs dla wybranego sezonu
-
-### **3. Pełna synchronizacja (wszystkie sezony)**
-```powershell
-python sync_player_full.py "Jakub Kamiński"
+python sync_player_full.py "Jakub Kamiński" --all-seasons
 ```
 **✅ Zwraca:** Competition stats + match logs ze wszystkich sezonów kariery
 
-### **4. Tylko match logs**
+### **2. Tylko match logs (obecny sezon)**
 ```powershell
 python sync_match_logs.py "Jakub Kamiński"
 ```
 **✅ Zwraca:** Tylko szczegółowe match logs dla obecnego sezonu
 
-### **5. Wszystkie sezony gracza (tylko competition stats)**
-```powershell
-python sync_player.py "Jakub Kamiński" --all-seasons
-```
-**✅ Zwraca:** Competition stats ze wszystkich sezonów (bez match logs)
+---
 
-### **6. Wszyscy gracze (obecny sezon)**
-```powershell
-python sync_all_playwright.py
-```
-**✅ Zwraca:** Competition stats + match logs dla wszystkich graczy (sezon 2025-2026)
+## 🤖 **Automatyczna synchronizacja (Scheduler)**
 
-### **7. Wszyscy gracze (wszystkie sezony)**
-```powershell
-python sync_all_playwright.py --all-seasons
-```
-**⚠️ Uwaga:** Bardzo czasochłonne (2-3h)
+**Backend na Render automatycznie synchronizuje wszystkich graczy:**
+- **Poniedziałek i Czwartek o 6:00** - pełne statystyki
+- **Wtorek o 7:00** - match logs
+- **Email powiadomienia** po każdej synchronizacji
+
+**Cron-job.org budzi backend 5 minut przed synchronizacją:**
+- **5:55 (Pon/Czw)** - wake-up przed stats sync
+- **6:55 (Wt)** - wake-up przed matchlogs sync
+
+**Nie musisz ręcznie synchronizować** - scheduler robi to automatycznie! 🎉
 
 ---
 
@@ -66,23 +51,12 @@ python sync_all_playwright.py --all-seasons
 
 | Sytuacja | Komenda | Czas |
 |----------|---------|------|
-| **Codzienna aktualizacja** | `sync_player.py "Nazwisko"` | ~15s |
-| **Sprawdzenie konkretnego sezonu** | `sync_player.py "Nazwisko" --season=2024-2025` | ~15s |
-| **Nowy gracz w bazie** | `sync_player_full.py "Nazwisko"` | ~60s |
+| **Nowy gracz w bazie** | `sync_player_full.py "Nazwisko" --all-seasons` | ~60s |
+| **Aktualizacja gracza** | `sync_player_full.py "Nazwisko" --all-seasons` | ~60s |
 | **Szybkie sprawdzenie meczów** | `sync_match_logs.py "Nazwisko"` | ~15s |
-| **Aktualizacja całej bazy** | `sync_all_playwright.py` | ~20 min |
+| **Aktualizacja całej bazy** | **Scheduler (automatycznie!)** | ~20-30 min |
 
----
-
-## 🔧 **Opcje dodatkowe**
-
-```powershell
-# Zobacz co się dzieje w przeglądarce
-python sync_player.py "Nazwisko" --visible
-
-# Używaj FBref ID zamiast wyszukiwania
-python sync_player.py "Nazwisko" --use-id
-```
+**💡 Zalecenie:** Używaj schedulera do regularnych aktualizacji. Ręcznie synchronizuj tylko nowych graczy lub gdy potrzebujesz natychmiastowej aktualizacji.
 
 ---
 

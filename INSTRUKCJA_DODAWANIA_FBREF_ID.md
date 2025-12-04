@@ -146,7 +146,7 @@ python add_fbref_ids.py
 
 Projekt ma już skrypt do dodawania graczy ręcznie!
 
-### `quick_add_player.py`
+### `add_piatek_manual.py` (manual template)
 
 ```python
 # Otwórz plik: polish-players-tracker/quick_add_player.py
@@ -164,7 +164,7 @@ player_data = {
 
 Uruchom:
 ```bash
-python quick_add_player.py
+# Removed - add players manually via add_piatek_manual.py
 ```
 
 ---
@@ -191,7 +191,7 @@ UPDATE players SET api_id = 'abc12345' WHERE name = 'Jakub Moder';
 
 ### 4. Synchronizuj:
 ```bash
-python sync_player.py "Jakub Moder"
+python sync_player_full.py "Jakub Moder" --all-seasons
 ```
 
 ### 5. Sprawdź w aplikacji:
@@ -235,7 +235,7 @@ SELECT COUNT(*) FROM players WHERE api_id IS NOT NULL AND api_id != '';
 
 1. **Znajdź FBref ID** (10 graczy = ~10 minut)
 2. **Dodaj do bazy** (SQL lub Python)
-3. **Synchronizuj** (`python sync_all_playwright.py`)
+3. **Synchronizuj** (`# Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)`)
 4. **Sprawdź w aplikacji** (http://localhost:8501)
 
 ---
@@ -268,7 +268,7 @@ SELECT COUNT(*) FROM players WHERE api_id IS NOT NULL AND api_id != '';
 - **Rozwiązanie:** Pomiń tych graczy lub usuń z bazy
 
 ### 3. Po dodaniu FBref ID:
-- Musisz zsynchronizować gracza: `python sync_player.py "Imię Nazwisko"`
+- Musisz zsynchronizować gracza: `python sync_player_full.py "Imię Nazwisko" --all-seasons`
 - LUB czekać na automatyczną synchronizację (scheduler)
 
 ---
@@ -277,7 +277,7 @@ SELECT COUNT(*) FROM players WHERE api_id IS NOT NULL AND api_id != '';
 
 ```bash
 # Synchronizuj wszystkich graczy
-python sync_all_playwright.py
+# Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)
 
 # Czas: ~16 minut (98 graczy × 12s)
 
@@ -292,7 +292,7 @@ streamlit run app/frontend/streamlit_app.py
 - [ ] Znaleźć FBref ID dla 19 graczy
 - [ ] Dodać ID do bazy (SQL lub Python)
 - [ ] Zweryfikować: `SELECT COUNT(*) FROM players WHERE api_id IS NOT NULL`
-- [ ] Synchronizować: `python sync_all_playwright.py`
+- [ ] Synchronizować: `# Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)`
 - [ ] Sprawdzić w aplikacji: http://localhost:8501
 
 ---
@@ -306,7 +306,7 @@ streamlit run app/frontend/streamlit_app.py
    - Wyszukaj na FBref → skopiuj ID z URL
    - `UPDATE players SET api_id = 'xxx' WHERE id = YY;`
 4. Zamknij: `.quit`
-5. Synchronizuj: `python sync_all_playwright.py`
+5. Synchronizuj: `# Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)`
 
 **Czas:** ~20 minut dla 19 graczy
 

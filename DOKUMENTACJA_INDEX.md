@@ -91,11 +91,11 @@
 
 | Skrypt | Przeznaczenie |
 |--------|---------------|
-| **`sync_player.py`** | Sync gracza (obecny sezon: stats+matchlogs) |
-| **`sync_all_playwright.py`** | Sync wszystkich graczy |
+| **`sync_player_full.py`** | Sync gracza (obecny sezon: stats+matchlogs) |
+| **`scheduler` (automatic)** | Sync wszystkich graczy |
 | **`sync_match_logs.py`** | Sync tylko matchlogs (obecny sezon) |
 | **`sync_player_full.py`** | Sync gracza (wszystkie sezony: stats+matchlogs) |
-| **`quick_add_player.py`** | Szybkie dodanie gracza |
+| **`add_piatek_manual.py` (manual template)** | Szybkie dodanie gracza |
 | **`manage.py`** | Zarządzanie bazą danych |
 
 ---

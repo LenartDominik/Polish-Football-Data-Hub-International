@@ -22,18 +22,18 @@ python sync_player.py
 
 #### **2. Synchronizacja konkretnych graczy:**
 ```powershell
-python sync_player.py "Robert Lewandowski"
-python sync_player.py "Lewandowski" "Zieliński"
+python sync_player_full.py "Robert Lewandowski" --all-seasons
+python sync_player_full.py "Lewandowski" --all-seasons "Zieliński"
 ```
 
 #### **3. Synchronizacja z wszystkimi sezonami:**
 ```powershell
-python sync_player.py --all-seasons
+python sync_player_full.py --all-seasons --all-seasons
 ```
 
 #### **4. Synchronizacja widoczna (bez headless):**
 ```powershell
-python sync_player.py --visible
+python sync_player_full.py --visible --all-seasons
 ```
 
 ### **Nowe opcje:**
@@ -43,7 +43,7 @@ python sync_player.py --visible
 python sync_playwright.py --season=2024-2025
 
 # Synchronizacja z ID (bez wyszukiwania)
-python sync_player.py --use-id
+python sync_player_full.py --use-id --all-seasons
 ```
 
 ---
@@ -140,7 +140,7 @@ streamlit run app/frontend/streamlit_app.py
 
 2. **Lub zsynchronizuj konkretnych graczy:**
    ```powershell
-   python sync_player.py "Zieliński" "Szczęsny"
+   python sync_player_full.py "Zieliński" --all-seasons "Szczęsny"
    ```
 
 3. **Sprawdź dane w frontend:**
@@ -223,12 +223,12 @@ python -c "from app.backend.database import SessionLocal; from app.backend.model
 
 ### **Szybka synchronizacja 5 graczy (test):**
 ```powershell
-python sync_player.py "Lewandowski" "Zieliński" "Szczęsny" "Fabiański" "Cash"
+python sync_player_full.py "Lewandowski" --all-seasons "Zieliński" "Szczęsny" "Fabiański" "Cash"
 ```
 
 ### **Synchronizacja tylko aktualnego sezonu:**
 ```powershell
-python sync_player.py --season=2024-2025
+python sync_player_full.py --season=2024-2025 --all-seasons
 ```
 
 ### **Sprawdzenie co jest w bazie:**

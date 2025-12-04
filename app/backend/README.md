@@ -355,18 +355,18 @@ Backend **NIE** posiada endpointów do synchronizacji. Zamiast tego użyj skrypt
 ### Synchronizacja pojedynczego gracza:
 ```powershell
 # Obecny sezon (2025-2026) - competition stats + match logs
-python sync_player.py "Robert Lewandowski"
+python sync_player_full.py "Robert Lewandowski" --all-seasons
 
 # Konkretny sezon
-python sync_player.py "Robert Lewandowski" --season=2024-2025
+python sync_player_full.py "Robert Lewandowski" --all-seasons --season=2024-2025
 
 # Wszystkie sezony
-python sync_player.py "Robert Lewandowski" --all-seasons
+python sync_player_full.py "Robert Lewandowski" --all-seasons --all-seasons
 ```
 
 ### Synchronizacja wszystkich graczy:
 ```powershell
-python sync_all_playwright.py
+# Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)
 ```
 
 ### Synchronizacja matchlogs (szczegóły meczów):
@@ -465,7 +465,7 @@ python -m playwright install chromium
 
 - **Frontend Dashboard:** `app/frontend/` (Streamlit)
 - **Baza danych:** `players.db` (katalog główny)
-- **Skrypty synchronizacji:** `sync_player.py`, `sync_all_playwright.py`
+- **Skrypty synchronizacji:** `sync_player_full.py`, `scheduler` (automatic)
 - **Dokumentacja główna:** `README.md` (katalog główny)
 - **Legal Notice:** `LEGAL_NOTICE.md` (katalog główny) ⚠️
 - **API Docs:** `API_DOCUMENTATION.md` (katalog główny)

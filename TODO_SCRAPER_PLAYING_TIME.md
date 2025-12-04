@@ -347,7 +347,7 @@ Oczekiwane: `minutes > 0`, `shots > 0`
 python tools/backup_database.py
 
 # Re-scrapuj wszystkich
-python sync_all_playwright.py
+# Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)
 
 # Sprawdź wyniki
 python tools/check_minutes_coverage.py

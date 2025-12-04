@@ -173,7 +173,7 @@ streamlit run streamlit_app.py --server.port 8502
 ### Brak danych graczy
 - Upewnij się, że backend jest uruchomiony
 - Sprawdź czy baza danych `players.db` zawiera dane
-- Zsynchronizuj graczy: `python sync_all_playwright.py`
+- Zsynchronizuj graczy: `# Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)`
 
 ### Błąd importu modułów
 ```powershell

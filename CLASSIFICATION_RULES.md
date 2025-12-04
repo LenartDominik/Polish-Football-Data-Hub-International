@@ -148,7 +148,7 @@ Expected output:
 ### January 2025 Fix #2 (Season 2025-2026)
 - **Issue:** 4 domestic cup records in 2025-2026 were classified as LEAGUE
 - **Affected:** DFB-Pokal (2 players), EFL Cup (2 players)
-- **Root Cause:** Bug in `sync_player.py` line 133 - DOMESTIC_CUP was converted to LEAGUE
+- **Root Cause:** Bug in `sync_player_full.py` line 133 - DOMESTIC_CUP was converted to LEAGUE
 - **Fixed:** Updated conversion logic and `get_competition_type()` function
 - **Solution:** Added DOMESTIC_CUP handling in both sync_player.py and main.py
 - **Script:** `fix_domestic_cups_2025.py`
@@ -188,7 +188,7 @@ Expected output:
 - `app/backend/services/fbref_playwright_scraper.py` (Lines 321-338, 464-478)
 
 ### Sync Scripts:
-- `sync_player.py` (Competition type conversion)
+- `sync_player_full.py` (Competition type conversion)
 
 ### Verification:
 - `verify_domestic_cups.py` (Classification verification)

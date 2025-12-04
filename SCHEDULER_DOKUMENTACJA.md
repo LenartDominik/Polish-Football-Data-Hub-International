@@ -352,7 +352,7 @@ CronTrigger(day_of_week='sat,sun', hour=10, minute=0)
 
 ### Dla developerów lokalnych:
 - ❌ **NIE włączaj** schedulera lokalnie (`ENABLE_SCHEDULER=false`)
-- Synchronizuj ręcznie: `python sync_player.py "Nazwisko"`
+- Synchronizuj ręcznie: `python sync_player_full.py "Nazwisko" --all-seasons`
 
 ### Dla deploymentu (Render):
 - ✅ **Włącz** scheduler (`ENABLE_SCHEDULER=true`)

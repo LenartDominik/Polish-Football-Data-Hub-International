@@ -1,6 +1,6 @@
 # Kolejność Synchronizacji Gracza (Który Jest Już w Bazie)
 
-**Komenda:** `python sync_player.py "Nazwisko"`
+**Komenda:** `python sync_player_full.py "Nazwisko" --all-seasons`
 
 **Typ:** Częściowa synchronizacja (tylko sezon 2025-2026)
 
@@ -309,9 +309,9 @@ db.commit()
 
 ---
 
-## 🔄 Różnica: `sync_player.py` vs `sync_player_full.py`
+## 🔄 Różnica: `sync_player_full.py` vs `sync_player_full.py`
 
-### `sync_player.py` (domyślnie):
+### `sync_player_full.py` (domyślnie):
 - ✅ Competition stats: wszystkie sezony z FBref
 - ✅ Match logs: **TYLKO 2025-2026**
 - ✅ Usuwa: tylko dane 2025-2026

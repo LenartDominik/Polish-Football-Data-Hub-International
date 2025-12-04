@@ -14,39 +14,42 @@ W bazie danych brakuje **1 meczu WCQ** dla Lewandowskiego i Świderskiego w roku
 
 ## 🚀 Jak Zsynchronizować Dane
 
-### Metoda 1: PowerShell Script (Zalecane)
+### Metoda 1: Pełna synchronizacja gracza (Zalecane)
 
 ```powershell
 cd polish-players-tracker
-.\sync_data.ps1
+python sync_player_full.py "Nazwisko Gracza" --all-seasons
 ```
 
 Ten skrypt:
 - Pobiera najnowsze dane z FBref
 - Aktualizuje `competition_stats`
 - Aktualizuje `player_matches`
+- Synchronizuje wszystkie sezony kariery
 
-### Metoda 2: Python Script z Playwright
-
-```bash
-cd polish-players-tracker
-python sync_player.py
-```
-
-### Metoda 3: Match Logs Sync
+### Metoda 2: Match Logs Sync (tylko mecze)
 
 ```bash
 cd polish-players-tracker
-python sync_match_logs.py
+python sync_match_logs.py "Nazwisko Gracza"
 ```
+
+### Metoda 3: Automatyczna synchronizacja (najlepsze!)
+
+Backend na Render automatycznie synchronizuje wszystkich graczy:
+- **Poniedziałek i Czwartek o 6:00** - pełne statystyki
+- **Wtorek o 7:00** - match logs
+- **Email powiadomienia** po każdej synchronizacji
+
+**Nie musisz nic robić - scheduler robi to za Ciebie!** 🤖
 
 ---
 
 ## ⏱️ Czas Wykonania
 
-- **sync_data.ps1**: ~5-10 minut (wszystkie dane)
-- **sync_player.py**: ~10-15 minut (szczegółowe dane)
-- **sync_match_logs.py**: ~2-5 minut (tylko mecze)
+- **sync_player_full.py**: ~60 sekund (jeden gracz, wszystkie sezony)
+- **sync_match_logs.py**: ~15 sekund (tylko mecze, jeden gracz)
+- **Scheduler (automatyczny)**: ~20-30 minut (wszyscy gracze)
 
 ---
 

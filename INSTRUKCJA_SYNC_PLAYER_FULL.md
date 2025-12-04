@@ -135,7 +135,7 @@ Write-Host "`n=== All players synced! ===" -ForegroundColor Green
 ### Problem: "Player not found"
 **Rozwiązanie:** Upewnij się, że gracz istnieje w bazie. Sprawdź dokładną pisownię:
 ```powershell
-python quick_add_player.py  # Dodaj gracza najpierw
+# Removed - add players manually via add_piatek_manual.py  # Dodaj gracza najpierw
 ```
 
 ### Problem: "No FBref ID"

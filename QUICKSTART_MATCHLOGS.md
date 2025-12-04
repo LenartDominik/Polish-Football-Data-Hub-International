@@ -115,7 +115,7 @@ echo $ENABLE_SCHEDULER
 curl http://localhost:8000/api/players/1
 
 # Jeśli api_id lub fbref_id jest puste:
-python sync_player.py "Nazwa Gracza"
+python sync_player_full.py "Nazwa Gracza" --all-seasons
 ```
 
 ### Email nie przychodzi

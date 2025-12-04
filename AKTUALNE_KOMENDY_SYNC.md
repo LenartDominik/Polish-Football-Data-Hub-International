@@ -2,27 +2,15 @@
 
 > **Stan na grudzień 2025** - Obecny sezon: **2025-2026**
 
-## 📋 **Szybkie komendy**
+## 📋 **Dostępne komendy**
 
-### **1. Pojedynczy gracz - obecny sezon**
+### **1. Pełna synchronizacja - wszystkie sezony**
 ```powershell
-python sync_player.py "Jakub Kamiński"
-```
-**Co robi:** Competition stats + match logs dla sezonu 2025-2026
-
-### **2. Pojedynczy gracz - konkretny sezon**
-```powershell
-python sync_player.py "Jakub Kamiński" --season=2024-2025
-```
-**Co robi:** Competition stats + match logs dla wybranego sezonu
-
-### **3. Wszystkie sezony gracza**
-```powershell
-python sync_player_full.py "Jakub Kamiński"
+python sync_player_full.py "Jakub Kamiński" --all-seasons
 ```
 **Co robi:** Competition stats + match logs ze wszystkich sezonów kariery
 
-### **4. Tylko match logs**
+### **2. Tylko match logs - obecny sezon**
 ```powershell
 python sync_match_logs.py "Jakub Kamiński"
 ```
@@ -34,30 +22,21 @@ python sync_match_logs.py "Jakub Kamiński"
 
 | Komenda | Competition Stats | Match Logs | Sezony | Czas |
 |---------|------------------|------------|--------|------|
-| `sync_player.py "Nazwisko"` | ✅ | ✅ | Obecny (2025-2026) | ~15s |
-| `sync_player.py "Nazwisko" --season=X` | ✅ | ✅ | Wybrany | ~15s |
-| `sync_player.py "Nazwisko" --all-seasons` | ✅ | ❌ | Wszystkie | ~30-60s |
-| `sync_player_full.py "Nazwisko"` | ✅ | ✅ | Wszystkie | ~60s |
+| `sync_player_full.py "Nazwisko" --all-seasons` | ✅ | ✅ | Wszystkie | ~60s |
 | `sync_match_logs.py "Nazwisko"` | ❌ | ✅ | Obecny | ~15s |
 
 ---
 
 ## 🎯 **Które użyć kiedy?**
 
-### **Codzienne aktualizacje:**
-```powershell
-python sync_player.py "Lewandowski"
-```
-
-### **Po przerwie reprezentacyjnej:**
-```powershell
-python sync_player.py "Lewandowski" --season=2024-2025  # eliminacje MŚ
-python sync_player.py "Lewandowski"                     # obecny sezon
-```
-
 ### **Nowy gracz - pełne dane:**
 ```powershell
-python sync_player_full.py "Nowy Gracz"
+python sync_player_full.py "Nowy Gracz" --all-seasons
+```
+
+### **Aktualizacja istniejącego gracza:**
+```powershell
+python sync_player_full.py "Lewandowski" --all-seasons
 ```
 
 ### **Tylko sprawdzenie ostatnich meczów:**
@@ -73,22 +52,19 @@ python sync_match_logs.py "Lewandowski"
 - **Poprzedni sezon**: 2024-2025 (lipiec 2024 - czerwiec 2025)
 - **Domyślny sezon**: Zawsze obecny (2025-2026)
 - **Rate limit**: 12 sekund między requestami do FBref
+- **Automatyczna synchronizacja**: Scheduler na Render (Pon/Czw 6:00, Wt 7:00)
 
 ---
 
-## 🔧 **Opcje dodatkowe**
+## 🤖 **Automatyczna synchronizacja (Scheduler)**
 
-```powershell
-# Zobacz przeglądarkę (debug)
-python sync_player.py "Nazwisko" --visible
+Backend na Render automatycznie synchronizuje wszystkich graczy:
+- **Stats sync:** Poniedziałek i Czwartek o 6:00
+- **Matchlogs sync:** Wtorek o 7:00
+- **Email powiadomienia:** Po każdej synchronizacji
 
-# Wszystkie gracze w bazie
-python sync_all_playwright.py
-
-# Wszystkie gracze - wszystkie sezony (ostrożnie!)
-python sync_all_playwright.py --all-seasons
-```
+**Nie musisz ręcznie synchronizować** - scheduler robi to automatycznie!
 
 ---
 
-**💡 Tip:** Jeśli nie jesteś pewien, użyj `sync_player.py "Nazwisko"` - to najczęściej używana komenda!
+**💡 Tip:** Do codziennych aktualizacji użyj schedulera (automatyczny). Ręcznie synchronizuj tylko nowych graczy lub gdy potrzebujesz natychmiastowej aktualizacji!

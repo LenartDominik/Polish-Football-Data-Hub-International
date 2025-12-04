@@ -118,11 +118,11 @@ Continue? (yes/no): yes
 🔄 Next Steps:
 
    1. Synchronize updated players:
-      python sync_all_playwright.py
+      # Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)
 
    2. Or synchronize individual players:
-      python sync_player.py "Jakub Moder"
-      python sync_player.py "Karol Linetty"
+      python sync_player_full.py "Jakub Moder" --all-seasons
+      python sync_player_full.py "Karol Linetty" --all-seasons
       
    3. Check the frontend:
       streamlit run app/frontend/streamlit_app.py
@@ -168,7 +168,7 @@ Continue? (yes/no): yes
 1. Znajdź wszystkie 19 ID na FBref (~15 min)
 2. Wpisz do `add_fbref_ids.py` (~3 min)
 3. Uruchom script (~1 min)
-4. Synchronizuj: `python sync_all_playwright.py` (~16 min)
+4. Synchronizuj: `# Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)` (~16 min)
 
 **Total: ~36 minut**
 
@@ -181,8 +181,8 @@ Continue? (yes/no): yes
 3. Uruchom script (~1 min)
 4. Synchronizuj tylko tych 5: (~2 min)
    ```bash
-   python sync_player.py "Jakub Moder"
-   python sync_player.py "Karol Linetty"
+   python sync_player_full.py "Jakub Moder" --all-seasons
+   python sync_player_full.py "Karol Linetty" --all-seasons
    # ... etc
    ```
 
@@ -203,7 +203,7 @@ Continue? (yes/no): yes
 - **Rozwiązanie:** Zostaw puste `''` - script pominie
 
 ### 3. Po dodaniu ID:
-- **MUSISZ** zsynchronizować gracza: `python sync_player.py "Imię Nazwisko"`
+- **MUSISZ** zsynchronizować gracza: `python sync_player_full.py "Imię Nazwisko" --all-seasons`
 - LUB czekać na automatyczną synchronizację (scheduler)
 
 ---
@@ -316,7 +316,7 @@ python add_fbref_ids.py
 # Wpisz: yes
 
 # 4. Synchronizuj
-python sync_player.py "Jakub Moder"
+python sync_player_full.py "Jakub Moder" --all-seasons
 
 # 5. Sprawdź w aplikacji
 streamlit run app/frontend/streamlit_app.py
@@ -332,7 +332,7 @@ streamlit run app/frontend/streamlit_app.py
 - [ ] Edytowałem słownik `fbref_ids` w pliku
 - [ ] Uruchomiłem script: `python add_fbref_ids.py`
 - [ ] Script zaktualizował bazę danych
-- [ ] Zsynchronizowałem graczy: `python sync_all_playwright.py`
+- [ ] Zsynchronizowałem graczy: `# Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)`
 - [ ] Sprawdziłem w aplikacji: http://localhost:8501
 
 ---
