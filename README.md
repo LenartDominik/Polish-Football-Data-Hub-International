@@ -16,7 +16,7 @@
 
 # 🇵🇱 Polish Football Data Hub International
 
-Nowoczesny system do monitorowania polskich piłkarzy grających za granicą. Automatyczna synchronizacja statystyk z FBref.com z użyciem Playwright, zaawansowana analiza danych i interaktywny dashboard.
+Modern system for monitoring Polish footballers playing abroad. Automatic statistics synchronization from FBref.com using Playwright, advanced data analysis, and interactive dashboard.
 
 ## 📊 Data Source & Attribution
 
@@ -38,27 +38,27 @@ All player statistics in this application are sourced from **[FBref.com](https:/
 
 ---
 
-## ✨ Główne funkcjonalności
+## ✨ Key Features
 
 ### 🕸️ FBref Playwright Scraper
-- **Automatyczny scraping** danych z FBref.com używając Playwright (headless browser)
-- **Zaawansowane statystyki zawodników z pola**: mecze, gole, asysty, xG, xA, xGI, G+A/90, minuty, kartki
-- **Statystyki bramkarzy**: obrony, czyste konta, % obron, karne, PSxG (Post-Shot xG)
-- **Rate limiting**: 12s między requestami (bezpieczne dla ToS)
-- **Rozbicie na rozgrywki**: Liga, Puchary Europejskie (LM/LE/LK), Reprezentacja (ROK KALENDARZOWY!), Puchary krajowe
-- **Match logs**: Szczegółowe statystyki meczowe dla każdego zawodnika
-- **Tracking 90+ polskich piłkarzy** z europejskich lig
+- **Automatic scraping** of data from FBref.com using Playwright (headless browser)
+- **Advanced field player statistics**: matches, goals, assists, xG, xA, xGI, G+A/90, minutes, cards
+- **Goalkeeper statistics**: saves, clean sheets, save %, penalties, PSxG (Post-Shot xG)
+- **Rate limiting**: 12s between requests (ToS compliant)
+- **Competition breakdown**: League, European Cups (UCL/UEL/UECL), National Team (CALENDAR YEAR!), Domestic Cups
+- **Match logs**: Detailed match statistics for each player
+- **Tracking 90+ Polish footballers** from European leagues
 
 ### 📊 Backend API (FastAPI)
-- **RESTful API** z automatyczną dokumentacją Swagger/ReDoc
-- **Endpointy**: gracze, porównania, statystyki, matchlogs, mecze live (w budowie)
-- **Baza danych**: PostgreSQL (Supabase - darmowe 500MB!)
-- **Scheduler**: automatyczna synchronizacja
-  - Statystyki: 2x w tygodniu (Poniedziałek/Czwartek 6:00)
-  - Matchlogs: 1x w tygodniu (Wtorek 7:00)
-- **Email notifications**: HTML raporty po każdej synchronizacji
-- **Rate limiting**: 12 sekund między requestami (bezpieczne dla FBref ToS)
-- **Cloud deployment**: gotowy do deployment na Render.com (darmowy hosting!)
+- **RESTful API** with automatic Swagger/ReDoc documentation
+- **Endpoints**: players, comparisons, statistics, matchlogs, live matches (in development)
+- **Database**: PostgreSQL (Supabase - free 500MB!)
+- **Scheduler**: automatic synchronization
+  - Stats: 2x per week (Monday/Thursday 6:00 AM)
+  - Matchlogs: 1x per week (Tuesday 7:00 AM)
+- **Email notifications**: HTML reports after each sync
+- **Rate limiting**: 12 seconds between requests (FBref ToS compliant)
+- **Cloud deployment**: ready for Render.com deployment (free hosting!)
 
 ### 🎨 Frontend Dashboard (Streamlit)
 **Multi-page application** with interactive dashboard and player comparison
@@ -74,82 +74,82 @@ All player statistics in this application are sourced from **[FBref.com](https:/
 - **Dedicated goalkeeper statistics**
 
 #### ⚖️ Compare Players (`pages/2_Compare_Players.py`)
-- **Porównanie side-by-side** dwóch graczy z wizualizacjami
+- **Side-by-side comparison** of two players with visualizations
 - ⚽ Field players vs field players
 - 🧤 Goalkeepers vs goalkeepers  
-- ⚠️ Blokada nieprawidłowych porównań (GK vs field player)
-- 📊 Wykresy radarowe i słupkowe
-- 📈 Porównanie statystyk per 90 minut
+- ⚠️ Prevents invalid comparisons (GK vs field player)
+- 📊 Radar and bar charts
+- 📈 Per 90 minutes statistics comparison
 
 #### 🔌 API Client (`api_client.py`)
-- **Inteligentne połączenie z backendem**:
-  - ☁️ Streamlit Cloud: używa `st.secrets["BACKEND_API_URL"]`
-  - 💻 Lokalnie: używa `os.getenv("API_BASE_URL")` lub `localhost:8000`
-  - ✅ Automatyczne wykrywanie środowiska
-- **Error handling**: czytelne komunikaty błędów
-- **Caching**: optymalizacja zapytań do API
+- **Smart backend connection**:
+  - ☁️ Streamlit Cloud: uses `st.secrets["BACKEND_API_URL"]`
+  - 💻 Local: uses `os.getenv("API_BASE_URL")` or `localhost:8000`
+  - ✅ Automatic environment detection
+- **Error handling**: clear error messages
+- **Caching**: optimized API queries
 
-### 🔄 Synchronizacja danych
+### 🔄 Data Synchronization
 - **CLI Scripts**: `sync_player_full.py`, `sync_match_logs.py`
-- **Automatyczny scheduler**: synchronizacja w tle (backend na Render)
-  - Statystyki graczy: poniedziałek i czwartek 6:00
-  - Szczegółowe matchlogi: wtorek 7:00
-  - Email powiadomienia po każdej synchronizacji
-- **Cron-job.org**: budzi backend przed synchronizacją (5:55, 6:55)
-- **Retry mechanism**: ponowne próby dla nieudanych synchronizacji
+- **Automatic scheduler**: background synchronization (backend on Render)
+  - Player stats: Monday and Thursday 6:00 AM
+  - Detailed matchlogs: Tuesday 7:00 AM
+  - Email notifications after each sync
+- **Cron-job.org**: wakes up backend before sync (5:55, 6:55)
+- **Retry mechanism**: automatic retries for failed syncs
 
-## ⚡ Quick Start - Najczęstsze komendy
+## ⚡ Quick Start - Most Common Commands
 
-### Uruchom aplikację
+### Run the application
 ```powershell
 .\start_backend.ps1    # Backend API (port 8000)
 .\start_frontend.ps1   # Dashboard (port 8501)
 ```
 
-### Zsynchronizuj pojedynczego gracza (wszystkie sezony)
+### Sync single player (all seasons)
 ```powershell
 python sync_player_full.py "Robert Lewandowski" --all-seasons
 ```
 
-### Zsynchronizuj szczegóły meczów (matchlogs - obecny sezon)
+### Sync match details (matchlogs - current season)
 ```powershell
 python sync_match_logs.py "Robert Lewandowski"
 ```
 
-### Automatyczna synchronizacja (najlepsze!)
-Backend na Render automatycznie synchronizuje wszystkich graczy:
-- **Poniedziałek i Czwartek o 6:00** - pełne statystyki
-- **Wtorek o 7:00** - match logs
-- **Email powiadomienia** po każdej synchronizacji
+### Automatic synchronization (recommended!)
+Backend on Render automatically syncs all players:
+- **Monday and Thursday at 6:00 AM** - full statistics
+- **Tuesday at 7:00 AM** - match logs
+- **Email notifications** after each sync
 
 **Nie musisz ręcznie synchronizować!** 🤖
 ```
 
 ---
 
-## 🚀 Pełna Instalacja
+## 🚀 Full Installation
 
-### Wymagania wstępne
+### Prerequisites
 - Python 3.10+
 - Playwright (Chromium)
-- PostgreSQL (Supabase - darmowe dla projektów hobby)
+- PostgreSQL (Supabase - free for hobby projects)
 
-### 1. Instalacja zależności
+### 1. Install Dependencies
 
 ```powershell
-# Aktywuj środowisko wirtualne
+# Activate virtual environment
 .\venv\Scripts\Activate.ps1
 
-# Zainstaluj pakiety
+# Install pakiety
 pip install -r requirements.txt
 
-# Zainstaluj Playwright Chromium
+# Install Playwright Chromium
 python -m playwright install chromium
 ```
 
-### 2. Konfiguracja
+### 2. Configuration
 
-Utwórz plik `.env` w głównym katalogu (lub skopiuj z `.env.example`):
+Utwórz file `.env` w głównym katalogu (or copy from `.env.example`):
 
 ```env
 
@@ -163,7 +163,7 @@ ENABLE_SCHEDULER=false
 # Timezone dla schedulera (domyślnie Europe/Warsaw)
 SCHEDULER_TIMEZONE=Europe/Warsaw
 
-# Email notifications (opcjonalne - scheduler działa bez nich!)
+# Email notifications (Optional - scheduler działa bez nich!)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
@@ -173,27 +173,27 @@ EMAIL_TO=recipient@example.com
 ```
 
 **📧 Email Setup:**
-- **Wymagane**: Gmail App Password (nie zwykłe hasło!)
-- **Instrukcje**: Zobacz [EMAIL_SETUP_GUIDE.md](EMAIL_SETUP_GUIDE.md)
-- **Opcjonalne**: Scheduler działa bez emaili (tylko logi w konsoli)
+- **Required**: Gmail App Password (nie zwykłe hasło!)
+- **Instructions**: See [EMAIL_SETUP_GUIDE.md](EMAIL_SETUP_GUIDE.md)
+- **Optional**: Scheduler działa bez emaili (tylko logi w konsoli)
 
-### 3. Uruchom aplikację
+### 3. Run the Application
 
 ```powershell
-# Uruchom backend (port 8000)
+# Start backend (port 8000)
 .\start_backend.ps1
 
-# Uruchom frontend (port 8501)
+# Start frontend (port 8501)
 .\start_frontend.ps1
 ```
 
-**Dostęp do aplikacji:**
+**Access the application:**
 - 🔧 **Backend API (Swagger UI):** http://localhost:8000/docs
 - 📖 **Backend API (ReDoc):** http://localhost:8000/redoc
 - 🏥 **Backend Health Check:** http://localhost:8000/health
 - 🎨 **Frontend Dashboard:** http://localhost:8501
 
-**💡 Tip:** Swagger UI pozwala testować API bezpośrednio w przeglądarce!
+**💡 Tip:** Swagger UI allows testing API directly in your browser!
 
 ## 🔄 Synchronizacja danych
 
@@ -210,25 +210,25 @@ SCHEDULER_TIMEZONE=Europe/Warsaw
 - 📅 **Czwartek 6:00** - po Lidze Mistrzów (środa)
 
 **Co synchronizuje:**
-- ✅ Competition stats i match logs sezonu 2025-2026 dla wszystkich graczy
+- ✅ Competition stats i match logs sezonu 2025-2026 dla all players
 - ✅ Liga krajowa + Puchary Europejskie + Reprezentacja
 - ✅ Rate limiting: 12 sekund między każdym graczem
 - ✅ Email z raportem po zakończeniu (opcjonalnie)
 
 **Wymagania:**
-- ⚠️ Backend musi być uruchomiony 24/7
-- ⚠️ Komputer musi być włączony (lub użyj cloud deployment!)
+- ⚠️ Backend musi być Startiony 24/7
+- ⚠️ Komputer musi być włączony (or użyj cloud deployment!)
 
-**Cloud deployment:** Zobacz [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) dla darmowego hostingu 24/7!
+**Cloud deployment:** See [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) for free 24/7 hosting!
 
 ---
 
 ### ⚡ Manualna synchronizacja
 
-#### Synchronizacja pojedynczego gracza
+#### Synchronize single player
 
 ```powershell
-# Pełna synchronizacja - wszystkie sezony (competition stats + match logs)
+# Pełna synchronizacja - all seasons (competition stats + match logs)
 python sync_player_full.py "Robert Lewandowski" --all-seasons
 
 # Tylko match logs dla obecnego sezonu (2025-2026)
@@ -239,43 +239,43 @@ python sync_match_logs.py "Robert Lewandowski" --season 2024-2025
 ```
 
 **Co synchronizuje:**
-- **sync_player_full.py**: Competition stats + match logs ze wszystkich sezonów kariery
+- **sync_player_full.py**: Competition stats + match logs ze all sezonów kariery
 - **sync_match_logs.py**: Tylko szczegółowe match logs (data, przeciwnik, wynik, gole, asysty, xG, xA, podania, etc.)
 
-#### Automatyczna synchronizacja wszystkich graczy (zalecane!)
+#### Automatyczna synchronizacja all players (zalecane!)
 
-Backend na Render automatycznie synchronizuje wszystkich graczy:
-- **Poniedziałek i Czwartek o 6:00** - pełne statystyki (wszystkie sezony)
-- **Wtorek o 7:00** - match logs (obecny sezon)
+Backend on Render automatically syncs all players:
+- **Poniedziałek i Czwartek o 6:00** - pełne statystyki (all seasons)
+- **Wtorek o 7:00** - match logs (current season)
 - **Email powiadomienia** z raportem po każdej synchronizacji
 - **Cron-job.org** budzi backend 5 minut przed synchronizacją
 
-**Nie musisz ręcznie synchronizować!** Scheduler robi to automatycznie. 🤖
+**Nie musisz ręcznie synchronizować!** Scheduler robi to automatically. 🤖
 
 Ręczna synchronizacja potrzebna tylko dla:
-- Nowych graczy (dodaj i sync ręcznie)
+- New players (dodaj i sync ręcznie)
 - Natychmiastowej aktualizacji (nie chcesz czekać do Pon/Czw/Wt)
 
 ### Automatyczna synchronizacja (Scheduler)
 
-Ustaw w pliku `.env`:
+Ustaw w file `.env`:
 ```env
 ENABLE_SCHEDULER=true
 ```
 
-Scheduler automatycznie zsynchronizuje wszystkich graczy:
+Scheduler automatically Synchronizee all players:
 - **Poniedziałek 6:00** - dzień po meczach weekendowych
 - **Czwartek 6:00** - dzień po meczach Ligi Mistrzów
 
 ## 📡 API Endpoints
 
 ### Players
-- `GET /api/players` - Lista wszystkich graczy
-- `GET /api/players/{id}` - Szczegóły gracza
+- `GET /api/players` - Lista all players
+- `GET /api/players/{id}` - Szczegóły player
 
 ### Comparison
-- `GET /api/comparison/compare` - Porównaj dwóch graczy
-- `GET /api/comparison/players/{id}/stats` - Statystyki gracza
+- `GET /api/comparison/compare` - Porównaj dwóch players
+- `GET /api/comparison/players/{id}/stats` - Player statistics
 - `GET /api/comparison/available-stats` - Dostępne statystyki
 
 ### Matches
@@ -283,7 +283,7 @@ Scheduler automatycznie zsynchronizuje wszystkich graczy:
 - `GET /api/matches/upcoming/{league}` - Nadchodzące mecze
 
 ### Matchlogs (Szczegóły meczów)
-- `GET /api/players/{id}/matches` - Lista meczów gracza
+- `GET /api/players/{id}/matches` - Lista meczów player
 - `GET /api/players/{id}/matches/stats` - Statystyki zagregowane z meczów
 - `GET /api/matches/{match_id}` - Szczegóły konkretnego meczu
 
@@ -291,22 +291,22 @@ Scheduler automatycznie zsynchronizuje wszystkich graczy:
 
 ```
 polish-players-tracker/
-├── .env                          # Konfiguracja (gitignored)
-├── .env.example                  # Przykładowa konfiguracja
+├── .env                          # Configuration (gitignored)
+├── .env.example                  # Przykładowa Configuration
 ├── .gitignore
 ├── requirements.txt              # Zależności Python
 ├── api_client.py                 # API client dla Streamlit (obsługa st.secrets)
-├── streamlit_app_cloud.py        # Główna aplikacja Streamlit Cloud
+├── streamlit_app_cloud.py        # Główna afileacja Streamlit Cloud
 ├── pages/                        # Strony Streamlit (multi-page app)
-│   └── 2_Compare_Players.py      # Strona porównywania graczy
-├── README.md                     # Ten plik
+│   └── 2_Compare_Players.py      # Strona porównywania players
+├── README.md                     # Ten file
 │
 ├── venv/                         # Środowisko wirtualne Python
 │
 ├── app/
 │   ├── backend/                  # Backend FastAPI
-│   │   ├── main.py               # Główna aplikacja + scheduler
-│   │   ├── config.py             # Konfiguracja
+│   │   ├── main.py               # Główna afileacja + scheduler
+│   │   ├── config.py             # Configuration
 │   │   ├── database.py           # Połączenie z bazą
 │   │   ├── models/               # Modele SQLAlchemy
 │   │   │   ├── player.py
@@ -330,13 +330,13 @@ polish-players-tracker/
 ├── alembic/                      # Migracje bazy danych
 │   └── versions/
 │
-├── start_backend.ps1             # Uruchom backend
-├── start_frontend.ps1            # Uruchom frontend
+├── start_backend.ps1             # Start backend
+├── start_frontend.ps1            # Start frontend
 │
-├── sync_player_full.py           # Sync gracza (wszystkie sezony: stats+matchlogs)
-├── sync_match_logs.py            # Sync tylko matchlogs (obecny sezon)
-├── sync_missing_players.py       # Sync graczy bez danych
-├── add_piatek_manual.py          # Ręczne dodanie gracza
+├── sync_player_full.py           # Sync player (all seasons: stats+matchlogs)
+├── sync_match_logs.py            # Sync tylko matchlogs (current season)
+├── sync_missing_players.py       # Sync players bez danych
+├── add_piatek_manual.py          # Ręczne dodanie player
 │
 └── tools/                        # Narzędzia pomocnicze
     └── check_reqs.py             # Weryfikacja pakietów
@@ -346,13 +346,13 @@ polish-players-tracker/
 
 ### 💾 PostgreSQL (Supabase)
 - **Jedyna wspierana baza danych** - stabilna, skalowalna, darmowa!
-- ✅ **500 MB storage** (wystarczy dla setek graczy)
+- ✅ **500 MB storage** (wystarczy dla setek players)
 - ✅ **Automatyczne backupy**
 - ✅ **Dashboard do przeglądania danych**
 - ✅ **Connection pooling**
 - ✅ **DARMOWE NA ZAWSZE** dla projektów hobby!
 
-### 🚀 Konfiguracja (5 minut):
+### 🚀 Configuration (5 minut):
 ```powershell
 # 1. Zarejestruj się: https://supabase.com (DARMOWE!)
 # 2. Utwórz projekt
@@ -360,7 +360,7 @@ polish-players-tracker/
 # 4. Dodaj do .env:
 DATABASE_URL=postgresql://postgres.xxxxx:[YOUR-PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
 
-# 5. Uruchom migracje (tworzy tabele):
+# 5. Start migracje (tworzy tabele):
 alembic upgrade head
 ```
 
@@ -372,7 +372,7 @@ alembic upgrade head
 
 ### Główne tabele:
 
-**`players`** - podstawowe informacje o graczach
+**`players`** - basic player information
 - id, name, team, league, position, nationality, is_goalkeeper, api_id, last_updated
 
 **`competition_stats`** - statystyki zawodników (nie-bramkarzy)
@@ -393,12 +393,12 @@ alembic upgrade head
 
 ## 🛠️ Narzędzia CLI
 
-### Dodawanie graczy
+### Dodawanie players
 
-#### Ręczne dodanie gracza
-Edytuj plik `add_piatek_manual.py` jako szablon:
+#### Ręczne dodanie player
+Edit file `add_piatek_manual.py` as template:
 ```python
-# Przykład dodania gracza
+# Przykład dodania player
 new_player = Player(
     name="Krzysztof Piątek",
     team="Istanbul Basaksehir",
@@ -416,23 +416,23 @@ db.commit()
 python sync_player_full.py "Krzysztof Piątek" --all-seasons
 ```
 **Parametry:**
-- `"Imię Nazwisko"` - pełne nazwisko gracza
-- `"Klub"` - nazwa klubu
+- `"Imię Nazwisko"` - pełne nazwisko player
+- `"Kor"` - nazwa koru
 - `"Liga"` - nazwa ligi
 - `"Pozycja"` - FW (napastnik), MF (pomocnik), DF (obrońca), GK (bramkarz)
-- `--sync` - automatycznie zsynchronizuj statystyki i matchlogs
+- `--sync` - automatically Synchronize statystyki i matchlogs
 
 **Ta komenda:**
-1. Dodaje gracza do bazy
-2. Synchronizuje statystyki sezonowe (wszystkie sezony)
-3. Synchronizuje matchlogs (obecny sezon 2025-2026)
+1. Adds player to database
+2. Synchronizuje statystyki sezonowe (all seasons)
+3. Synchronizuje matchlogs (current season 2025-2026)
 
 #### Ręczne dodanie przez kod (dla deweloperów)
 ```powershell
-# Edytuj plik add_piatek_manual.py i uruchom
+# Edit file add_piatek_manual.py i Start
 python add_piatek_manual.py
 ```
-Plik `add_piatek_manual.py` to przykład jak dodać gracza bezpośrednio przez kod Python.
+file `add_piatek_manual.py` to przykład jak dodać player bezpośrednio przez kod Python.
 
 ### Zarządzanie bazą
 ```powershell
@@ -450,40 +450,40 @@ python tools/check_reqs.py
 
 | Co chcesz zrobić | Komenda |
 |------------------|---------|
-| 🔄 Zsynchronizuj gracza (wszystkie sezony) | `python sync_player_full.py "Lewandowski" --all-seasons` |
-| 🎯 Sync matchlogs (obecny sezon) | `python sync_match_logs.py "Lewandowski"` |
-| 📅 Sync graczy bez danych | `python sync_missing_players.py` |
-| 🤖 **Automatyczna sync (scheduler)** | **Backend na Render - automatycznie Pon/Czw/Wt** |
+| 🔄 Synchronize player (all seasons) | `python sync_player_full.py "Lewandowski" --all-seasons` |
+| 🎯 Sync matchlogs (current season) | `python sync_match_logs.py "Lewandowski"` |
+| 📅 Sync players bez danych | `python sync_missing_players.py` |
+| 🤖 **Automatic sync (scheduler)** | **Backend on Render - automatically Mon/Thu/Tue** |
 | 🧪 Test emaila | `python -c "from app.backend.main import send_sync_notification_email; send_sync_notification_email(1, 0, 1, 0.5, [])"` |
 
 ### Synchronizacja (pełne przykłady)
 
 | Co chcesz zrobić | Komenda | Czas |
 |------------------|---------|------|
-| 📚 Pełna synchronizacja gracza (wszystkie sezony) | `python sync_player_full.py "Nazwisko" --all-seasons` | ~60s |
-| 🏆 Szczegóły meczów (obecny sezon) | `python sync_match_logs.py "Nazwisko"` | ~15s |
+| 📚 Pełna synchronizacja player (all seasons) | `python sync_player_full.py "Nazwisko" --all-seasons` | ~60s |
+| 🏆 Szczegóły meczów (current season) | `python sync_match_logs.py "Nazwisko"` | ~15s |
 | 🏆 Szczegóły meczów (konkretny sezon) | `python sync_match_logs.py "Nazwisko" --season 2024-2025` | ~15s |
-| 🤖 Wszyscy gracze (automatycznie) | **Scheduler na Render (Pon/Czw 6:00, Wt 7:00)** | ~20-30 min |
+| 🤖 Wszyscy gracze (automatically) | **Scheduler na Render (Pon/Czw 6:00, Wt 7:00)** | ~20-30 min |
 
-**💡 Zalecenie:** Używaj schedulera do regularnych aktualizacji. Ręcznie synchronizuj tylko nowych graczy lub gdy potrzebujesz natychmiastowej aktualizacji.
+**💡 Zalecenie:** Używaj schedulera do regularnych aktualizacji. Ręcznie synchronizuj tylko New players or gdy potrzebujesz natychmiastowej aktualizacji.
 
-### Dodawanie graczy
+### Dodawanie players
 
 | Co chcesz zrobić | Komenda |
 |------------------|---------|
-| 🔧 Dodaj ręcznie (edytuj szablon) | `python add_piatek_manual.py` |
+| 🔧 Dodaj ręcznie (edit template) | `python add_piatek_manual.py` |
 | 🔄 Synchronizuj po dodaniu | `python sync_player_full.py "Nazwisko" --all-seasons` |
 
 ### Uruchamianie
 
 | Co chcesz zrobić | Komenda |
 |------------------|---------|
-| 🔧 Backend API | `.\start_backend.ps1` lub `python -m uvicorn app.backend.main:app --reload` |
-| 🎨 Frontend Dashboard | `.\start_frontend.ps1` lub `streamlit run app/frontend/streamlit_app.py` |
+| 🔧 Backend API | `.\start_backend.ps1` or `python -m uvicorn app.backend.main:app --reload` |
+| 🎨 Frontend Dashboard | `.\start_frontend.ps1` or `streamlit run app/frontend/streamlit_app.py` |
 
 ### API Endpoints
 
-**Dokumentacja interaktywna:**
+**Documentation interaktywna:**
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
@@ -493,46 +493,46 @@ python tools/check_reqs.py
 |----------|--------|------|
 | `/` | GET | Strona główna API + scheduler status |
 | `/health` | GET | Health check (dla monitoringu) |
-| `/api/players/` | GET | Lista wszystkich graczy |
-| `/api/players/{id}` | GET | Szczegóły gracza |
+| `/api/players/` | GET | Lista all players |
+| `/api/players/{id}` | GET | Szczegóły player |
 | `/api/players/stats/competition` | GET | Wszystkie statystyki ligowe/europejskie |
 | `/api/players/stats/goalkeeper` | GET | Wszystkie statystyki bramkarskie |
 | `/api/players/stats/matches` | GET | Wszystkie mecze (match logs) |
-| `/api/comparison/players/{id}/stats` | GET | Statystyki gracza do porównania |
-| `/api/comparison/compare` | GET | Porównaj dwóch graczy |
+| `/api/comparison/players/{id}/stats` | GET | Player statistics do porównania |
+| `/api/comparison/compare` | GET | Porównaj dwóch players |
 | `/api/comparison/available-stats` | GET | Dostępne statystyki do porównania |
-| `/api/matchlogs/{player_id}` | GET | Match logs gracza (z filtrami) |
+| `/api/matchlogs/{player_id}` | GET | Player match logs (with filters) |
 | `/api/matchlogs/{player_id}/stats` | GET | Agregowane statystyki z meczów |
 | `/api/matchlogs/match/{match_id}` | GET | Szczegóły pojedynczego meczu |
 
-**📚 Dokumentacja API:**
+**📚 Documentation API:**
 - **Swagger UI (interaktywna):** http://localhost:8000/docs
 - **ReDoc (czytelna):** http://localhost:8000/redoc
 
 **💡 Swagger UI Features:**
 - ✅ Testuj endpointy bezpośrednio w przeglądarce
-- ✅ Zobacz wszystkie parametry i response schemas
+- ✅ See wszystkie parametry i response schemas
 - ✅ Przykładowe requesty i responses
 - ✅ Automatyczna walidacja
 
 ---
 
-## 📚 Dokumentacja szczegółowa
+## 📚 Documentation szczegółowa
 
-### 📖 Dokumentacja projektu
-- 📘 [Backend API - Dokumentacja](app/backend/README.md)
-- 📗 [Frontend - Dokumentacja](app/frontend/README.md)
+### 📖 Documentation projektu
+- 📘 [Backend API - Documentation](app/backend/README.md)
+- 📗 [Frontend - Documentation](app/frontend/README.md)
 - 📄 [Stack technologiczny](STACK.md)
 - 📚 [Documentation Index (ENG)](DOCUMENTATION_INDEX.md) - Pełny indeks dokumentacji
-- 📚 [Dokumentacja Index (PL)](DOKUMENTACJA_INDEX.md) - Pełny indeks dokumentacji
-- 🔐 [Email Setup Guide](EMAIL_SETUP_GUIDE.md) - Konfiguracja Gmail/Outlook/SendGrid
+- 📚 [Documentation Index (PL)](Documentation_INDEX.md) - Pełny indeks dokumentacji
+- 🔐 [Email Setup Guide](EMAIL_SETUP_GUIDE.md) - Configuration Gmail/Outlook/SendGrid
 - 📋 [Classification Rules](CLASSIFICATION_RULES.md) - Reguły klasyfikacji rozgrywek
 - 🏗️ [Architecture Diagram](ARCHITECTURE_DIAGRAM.md) - Diagram architektury systemu
 - 🚀 [Render Deployment Guide](RENDER_DEPLOYMENT.md) - **Darmowy hosting 24/7!**
-- ☁️ [Streamlit Cloud Deployment](STREAMLIT_CLOUD_DEPLOYMENT.md) - **Darmowy hosting frontendu!**
-- 🔐 [Streamlit Secrets Setup](STREAMLIT_SECRETS_SETUP.md) - **Konfiguracja połączenia z backendem**
+- ☁️ [Streamlit Cloud Deployment](STREAMLIT_CLOUD_DEPLOYMENT.md) - **Free frontend hosting!**
+- 🔐 [Streamlit Secrets Setup](STREAMLIT_SECRETS_SETUP.md) - **Configuration połączenia z backendem**
 - 🏢 [Commercial Deployment Guide](COMMERCIAL_DEPLOYMENT.md) - **PostgreSQL + Streamlit Cloud**
-- 📖 [API Documentation](API_DOCUMENTATION.md) - Kompletna dokumentacja API (wszystkie endpointy, przykłady)
+- 📖 [API Documentation](API_DOCUMENTATION.md) - Kompletna Documentation API (wszystkie endpointy, przykłady)
 - 📖 [API Complete Reference](API_COMPLETE_REFERENCE.md) - Szybka referencja endpointów
 - ⚖️ [Legal Notice](LEGAL_NOTICE.md) - **WAŻNE - Przeczytaj przed użyciem!**
 - 🎓 [Credits](CREDITS.md) - Podziękowania i atrybuty
@@ -543,9 +543,9 @@ python tools/check_reqs.py
 - 🎨 [Streamlit Docs](https://docs.streamlit.io/)
 - 🎭 [Playwright Docs](https://playwright.dev/python/)
 
-## ☁️ Cloud Deployment (Darmowy hosting 24/7!)
+## ☁️ Cloud Deployment (Free 24/7 hosting!)
 
-### 🚀 Opcja 1: Render.com - Backend + Supabase (DARMOWE!)
+### 🚀 Option 1: Render.com - Backend + Supabase (FREE!)
 
 **Dla hobby/testów - Darmowy Plan:**
 - ✅ **$0/miesiąc** - całkowicie darmowe!
@@ -558,7 +558,7 @@ python tools/check_reqs.py
 1. Push projektu do GitHub
 2. Zarejestruj się na https://render.com
 3. Połącz repozytorium
-4. Render wykrywa `render.yaml` automatycznie! ✨
+4. Render wykrywa `render.yaml` automatically! ✨
 5. Dodaj zmienne środowiskowe (email)
 6. Deploy!
 
@@ -566,9 +566,9 @@ python tools/check_reqs.py
 
 ---
 
-### 🏢 Opcja 2: Komercyjny Deployment (PostgreSQL + Streamlit Cloud)
+### 🏢 Option 2: Commercial Deployment (PostgreSQL + Streamlit Cloud)
 
-**Dla aplikacji komercyjnych:**
+**Dla afileacji komercyjnych:**
 - ✅ **PostgreSQL** w chmurze (Supabase/Railway/Render)
 - ✅ **Streamlit Cloud** - frontend dashboard
 - ✅ **Skalowalna architektura**
@@ -592,7 +592,7 @@ Email:    SendGrid (darmowe 100/dzień)
 ### 🖥️ Lokalny deployment (wymaga włączonego komputera)
 
 **Windows Task Scheduler:**
-- Automatyczne uruchomienie po restarcie
+- Automatyczne Startienie po restarcie
 - Backend działa w tle
 
 **Raspberry Pi:**
@@ -600,7 +600,7 @@ Email:    SendGrid (darmowe 100/dzień)
 - Zawsze włączony
 - ~200-300 zł jednorazowo
 
-**Instrukcje:** Zobacz [DEPLOYMENT_SUMMARY.md](DEPLOYMENT_SUMMARY.md)
+**Instructions:** See [DEPLOYMENT_SUMMARY.md](DEPLOYMENT_SUMMARY.md)
 
 ---
 
@@ -609,15 +609,15 @@ Email:    SendGrid (darmowe 100/dzień)
 ### 📚 Dedykowane Przewodniki Troubleshooting
 
 - **[TROUBLESHOOTING_DATABASE.md](TROUBLESHOOTING_DATABASE.md)** - Problemy z połączeniem do bazy danych (Supabase, Render)
-- **[SCHEDULER_STATUS_GUIDE.md](SCHEDULER_STATUS_GUIDE.md)** - Monitoring i konfiguracja automatycznej synchronizacji
-- **[EMAIL_SETUP_GUIDE.md](EMAIL_SETUP_GUIDE.md)** - Konfiguracja powiadomień email dla schedulera
+- **[SCHEDULER_STATUS_GUIDE.md](SCHEDULER_STATUS_GUIDE.md)** - Monitoring i Configuration automatycznej synchronizacji
+- **[EMAIL_SETUP_GUIDE.md](EMAIL_SETUP_GUIDE.md)** - Configuration powiadomień email dla schedulera
 
-### Backend nie startuje
+### Backend won't start
 ```powershell
 # Sprawdź czy port 8000 jest wolny
 netstat -ano | findstr :8000
 
-# Uruchom na innym porcie
+# Start na innym porcie
 python -m uvicorn app.backend.main:app --port 8001
 ```
 
@@ -626,14 +626,14 @@ python -m uvicorn app.backend.main:app --port 8001
 # Upewnij się że backend działa
 Invoke-RestMethod http://localhost:8000/health
 
-# Uruchom backend jeśli nie działa
+# Start backend jeśli nie działa
 .\start_backend.ps1
 ```
 
 ### Brak Playwright/Chromium
 ```powershell
 python -m playwright install chromium
-python -m playwright install-deps chromium  # Linux: zainstaluj system dependencies
+python -m playwright install-deps chromium  # Linux: Install system dependencies
 ```
 
 ### Błędy synchronizacji
@@ -641,7 +641,7 @@ python -m playwright install-deps chromium  # Linux: zainstaluj system dependenc
 # Sprawdź logi
 # Backend wyświetla szczegółowe logi w konsoli
 
-# Przetestuj pojedynczego gracza
+# Test single player
 python sync_player_full.py "Robert Lewandowski" --all-seasons
 
 # Debug mode z widoczną przeglądarką
@@ -650,10 +650,10 @@ python sync_player_full.py "Lewandowski" --all-seasons
 
 ### PostgreSQL: "duplicate key value violates unique constraint"
 ```powershell
-# Automatyczne naprawienie - uruchom skrypt naprawczy
+# Automatyczne naprawienie - Start skrypt naprawczy
 python fix_postgres_sequences.py
 
-# Problem rozwiązany automatycznie w skryptach:
+# Problem rozwiązany automatically w skryptach:
 # - sync_player_full.py
 # - sync_match_logs.py
 
@@ -662,7 +662,7 @@ python fix_postgres_sequences.py
 
 ### Database Connection Issues (Render/Supabase)
 
-**Problem:** `password authentication failed` lub `connection refused`
+**Problem:** `password authentication failed` or `connection refused`
 
 **Szybkie rozwiązanie:**
 1. Sprawdź `DATABASE_URL` w Render Environment
@@ -677,7 +677,7 @@ python fix_postgres_sequences.py
 ENABLE_SCHEDULER=true
 
 # Sprawdź logi backendu
-# Powinno być: "✅ Scheduler uruchomiony"
+# Powinno być: "✅ Scheduler Startiony"
 # Jeśli nie ma - sprawdź .env
 
 # Sprawdź następną synchronizację
@@ -690,7 +690,7 @@ ENABLE_SCHEDULER=true
 python -c "from app.backend.main import send_sync_notification_email; send_sync_notification_email(1, 0, 1, 0.5, []); print('Email sent!')"
 
 # Sprawdź konfigurację
-# Zobacz: EMAIL_SETUP_GUIDE.md
+# See: EMAIL_SETUP_GUIDE.md
 # Użyj Gmail App Password (nie zwykłe hasło!)
 ```
 
