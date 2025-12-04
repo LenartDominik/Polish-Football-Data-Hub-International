@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-Full-stack web application for tracking Polish footballers playing abroad with real-time statistics.
+Full-stack web application for tracking Polish footballers playing abroad.
 
 **Architecture:** Modern Python-based web application
 - **Backend:** FastAPI REST API
@@ -16,25 +16,25 @@ Full-stack web application for tracking Polish footballers playing abroad with r
 ## 🔧 Backend (API)
 
 ### Framework
-- **FastAPI 0.120+** - Modern, fast framework for building REST APIs
-  - Automatic data validation (Pydantic)
-  - Auto-generated documentation (Swagger UI + ReDoc)
+- **FastAPI 0.120+** - Nowoczesny, szybki framework do budowy REST API
+  - Automatyczna walidacja danych (Pydantic)
+  - Auto-generowana dokumentacja (Swagger UI + ReDoc)
   - Obsługa async/await
-  - Type hints and modern Python
+  - Type hints i modern Python
 
-### ASGI Server
+### Serwer ASGI
 - **Uvicorn 0.38+** - Lightning-fast ASGI server
-  - WebSocket support
-  - Hot reload in development
+  - Wspiera WebSockets
+  - Hot reload w development
 
-### ORM and Database
-- **SQLAlchemy 2.0+** - Most popular Python ORM
-  - Declarative models
+### ORM i Baza Danych
+- **SQLAlchemy 2.0+** - Najpopularniejszy Python ORM
+  - Deklaratywne modele
   - Query builder
   - Relationship management
-- **PostgreSQL** - Advanced relational database
+- **PostgreSQL** - Zaawansowana relacyjna baza danych
 - **Supabase** - Hosting PostgreSQL (darmowe 500MB)
-  - Automatic backups
+  - Automatyczne backupy
   - Connection pooling
   - Dashboard do zarządzania danymi
   - ACID compliant
@@ -165,7 +165,7 @@ Szczegółowe statystyki z pojedynczych meczów (matchlogs)
 ```
 ┌─────────────────────┐
 │    FBref.com        │ ← Źródło danych
-│  - /all_comps/      │   (season statistics)
+│  - /all_comps/      │   (statystyki sezonowe)
 │  - /matchlogs/      │   (szczegóły meczów)
 └──────────┬──────────┘
            │
@@ -177,7 +177,7 @@ Szczegółowe statystyki z pojedynczych meczów (matchlogs)
            │
            ▼
 ┌─────────────────────┐
-│   PostgreSQL       │ ← Data persistence
+│   PostgreSQL       │ ← Persistencja danych
 │   (Supabase)       │
 │  - players          │
 │  - competition_stats│
@@ -280,8 +280,8 @@ python -m venv venv
 - ✅ Rate limiting (oszczędność zasobów FBref)
 
 ### Limity:
-- **PostgreSQL (Supabase):** Skalowalne, darmowe 500MB, Automatic backups
-- **Scraper:** ~12 sekund per player (FBref ToS)
+- **PostgreSQL (Supabase):** Skalowalne, darmowe 500MB, automatyczne backupy
+- **Scraper:** ~12 sekund per gracz (FBref ToS)
 - **Streamlit:** ~1 GB RAM (free tier)
 
 ---
@@ -289,11 +289,11 @@ python -m venv venv
 ## 🧪 Testing
 
 ### Obecne podejście:
-- Manual testing via Swagger UI (`/docs`)
-- Manual testing via Streamlit dashboard
-- CLI scripts for data verification
+- Manual testing przez Swagger UI (`/docs`)
+- Manual testing przez Streamlit dashboard
+- CLI scripts do weryfikacji danych
 
-### Potential extensions:
+### Potencjalne rozszerzenia:
 - Unit tests (pytest)
 - Integration tests (pytest + httpx)
 - E2E tests (playwright)
@@ -302,18 +302,18 @@ python -m venv venv
 
 ## 📚 Dokumentacja
 
-### Auto-generated:
+### Auto-generowana:
 - **Swagger UI:** http://127.0.0.1:8000/docs
 - **ReDoc:** http://127.0.0.1:8000/redoc
 
 ### Ręczna:
 - **README.md** - Główna dokumentacja
 - **LEGAL_NOTICE.md** ⚠️ - Informacje prawne (WAŻNE!)
-- **STACK.md** - This file
-- **STREAMLIT_CLOUD_DEPLOYMENT.md** - Deployment guide
-- **ARCHITECTURE_DIAGRAM.md** - Architecture diagrams
-- **API_DOCUMENTATION.md** - API documentation
-- **CLASSIFICATION_RULES.md** - Competition classification rules
+- **STACK.md** - Ten plik
+- **STREAMLIT_CLOUD_DEPLOYMENT.md** - Przewodnik deployment
+- **ARCHITECTURE_DIAGRAM.md** - Diagramy architektury
+- **API_DOCUMENTATION.md** - Dokumentacja API
+- **CLASSIFICATION_RULES.md** - Zasady klasyfikacji rozgrywek
 - **DOCUMENTATION_INDEX.md** - Indeks wszystkich dokumentów
 
 ---
