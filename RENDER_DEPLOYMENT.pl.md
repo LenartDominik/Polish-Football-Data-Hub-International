@@ -1,4 +1,4 @@
-﻿# 🚀 Deployment na Render.com
+# 🚀 Deployment na Render.com
 
 ## Krok po kroku - Deployment backendu z schedulerem na Render
 
@@ -195,7 +195,7 @@ Teraz Twoja aplikacja:
 - ✅ Działa 24/7 w chmurze
 - ✅ Scheduler synchronizuje graczy 2x w tygodniu
 - ✅ Nie musisz trzymać komputera włączonego
-- ✅ Automatic deploys from GitHub
+- ✅ Automatyczne deploye z GitHub
 - ✅ Darmowe! ($0/miesiąc)
 
 ---
