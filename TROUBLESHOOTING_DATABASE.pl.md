@@ -1,19 +1,19 @@
-﻿# 🔧 Troubleshooting: Database Connection Issues
+# 🔧 Troubleshooting: Database Connection Issues
 
 ## Problem: `password authentication failed for user "postgres"`
 
-### Causes and Solutions
+### Przyczyny i Rozwiązania
 
-#### 1. ❌ **Incorrect password in DATABASE_URL**
+#### 1. ❌ **Błędne hasło w DATABASE_URL**
 
 **Objaw:**
 ```
 psycopg2.OperationalError: password authentication failed for user "postgres"
 ```
 
-**Solution:**
-1. Check password in **Supabase Dashboard** → Settings → Database → Reset Password (if needed)
-2. Copy **new password**
+**Rozwiązanie:**
+1. Sprawdź hasło w **Supabase Dashboard** → Settings → Database → Reset Password (jeśli potrzeba)
+2. Skopiuj **nowe hasło**
 3. Zaktualizuj `DATABASE_URL` na Renderze:
    - Render Dashboard → Twój serwis → **Environment**
    - Znajdź `DATABASE_URL` i edytuj
@@ -34,7 +34,7 @@ FATAL: password authentication failed for user "postgres"
 
 **Problem:** Transaction Pooler (port **6543**) wymaga formatu `postgres.PROJECT_REF`, nie samego `postgres`.
 
-**Solution:**
+**Rozwiązanie:**
 
 1. **Sprawdź w Supabase** poprawny format:
    - Supabase Dashboard → Settings → Database
@@ -62,7 +62,7 @@ FATAL: password authentication failed for user "postgres"
 **Objaw:**
 - Błąd połączenia pomimo prawidłowego `DATABASE_URL` w Dashboard
 
-**Solution:**
+**Rozwiązanie:**
 
 1. **Sprawdź czy zmienna istnieje:**
    - Render Dashboard → Environment
@@ -84,7 +84,7 @@ FATAL: password authentication failed for user "postgres"
 ImportError: undefined symbol: _PyInterpreterState_Get
 ```
 
-**Solution:**
+**Rozwiązanie:**
 
 Plik `.python-version` wymusza Python 3.11:
 ```
