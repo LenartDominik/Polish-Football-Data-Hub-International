@@ -2,7 +2,27 @@
 
 **Status:** ✅ Production Ready | **Database:** PostgreSQL (Supabase) | **Deployment:** Cloud-Ready
 
-> 📊 Real-time monitoring and analysis of 90+ Polish footballers playing abroad  
+> 📊 Real-time monitoring and analysis of 90+ Polish footballers playing abroad
+
+## 🌐 Live Application
+
+**Try it now:** [https://polish-football-data-international-tracker.streamlit.app/](https://polish-football-data-international-tracker.streamlit.app/)
+
+### 📱 How to Use:
+
+1. **Browse Players** - View all tracked Polish footballers with their current statistics
+2. **Filter Data** - Use sidebar filters to narrow down by:
+   - League (Bundesliga, La Liga, Serie A, etc.)
+   - Team
+   - Position (GK, DF, MF, FW)
+   - Competition Type (League, European Cups, National Team)
+   - Season
+3. **Compare Players** - Click "Compare Players" in sidebar to compare two players side-by-side
+4. **Export Data** - Download filtered data as CSV for your own analysis
+
+**📊 Data Updates:** Automatically synchronized 3x per week (Monday, Thursday, Tuesday) from FBref.com
+
+---  
 > ⚖️ **[Legal Notice - Important!](LEGAL_NOTICE.md)** | 🚀 **[Deployment Guide](STREAMLIT_CLOUD_DEPLOYMENT.md)**
 
 ## ⚖️ Legal Notice
