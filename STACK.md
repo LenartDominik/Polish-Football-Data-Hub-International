@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-Full-stack web application for tracking Polish footballers playing abroad with real-time statistics.
+Full-stack web application for tracking Polish footballers playing abroad.
 
 **Architecture:** Modern Python-based web application
 - **Backend:** FastAPI REST API
