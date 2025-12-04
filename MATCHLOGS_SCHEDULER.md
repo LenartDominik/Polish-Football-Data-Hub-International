@@ -2,7 +2,7 @@
 
 ## 🎯 Przegląd
 
-Automatyczna synchronizacja szczegółowych logów meczowych dla wszystkich graczy w bazie danych. Scheduler został dodany do systemu automatyzacji Polish Players Tracker.
+Automatyczna synchronizacja szczegółowych logów meczowych dla wszystkich graczy w bazie danych. Scheduler został dodany do systemu automatyzacji Polish Football Data Hub International.
 
 ## ⏰ Harmonogram
 

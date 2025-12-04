@@ -1,4 +1,4 @@
-# 📚 API Documentation - Polish Players Tracker
+# 📚 API Documentation - Polish Football Data Hub International
 
 **Base URL:** `http://localhost:8000` (local) or `https://your-backend.onrender.com` (production)  
 **Interactive Docs:** 

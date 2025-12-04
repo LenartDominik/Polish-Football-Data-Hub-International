@@ -1,4 +1,4 @@
-# Polish Players Tracker - Frontend
+# Polish Football Data Hub International - Frontend
 
 **Wersja:** v0.7.4 | **Status:** ✅ Production Ready
 

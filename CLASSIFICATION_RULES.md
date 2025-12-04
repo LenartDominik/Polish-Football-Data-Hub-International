@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This document explains how competitions are classified in the Polish Players Tracker system.
+This document explains how competitions are classified in the Polish Football Data Hub International system.
 
 ---
 

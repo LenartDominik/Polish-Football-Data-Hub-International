@@ -1,4 +1,4 @@
-# ?? Polish Players Tracker - Complete API Reference
+# ?? Polish Football Data Hub International - Complete API Reference
 
 **Version:** 0.7.4
 **Base URL:** `http://localhost:8000` (development) or `https://your-domain.com` (production)

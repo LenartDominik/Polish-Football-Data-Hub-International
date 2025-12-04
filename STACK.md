@@ -1,4 +1,4 @@
-# 🛠️ Stack Technologiczny - Polish Players Tracker
+# 🛠️ Stack Technologiczny - Polish Football Data Hub International
 
 ## 📋 Przegląd projektu
 

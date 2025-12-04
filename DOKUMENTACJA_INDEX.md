@@ -1,4 +1,4 @@
-# 📚 Indeks Dokumentacji - Polish Players Tracker
+# 📚 Indeks Dokumentacji - Polish Football Data Hub International
 
 ## 🎯 Gdzie Znaleźć Co Potrzebujesz
 

@@ -28,7 +28,7 @@
 - **NOT for commercial use** without proper licensing
 - **See [LEGAL_NOTICE.md](LEGAL_NOTICE.md) for full details**
 
-# 🇵🇱 Polish Players Tracker
+# 🇵🇱 Polish Football Data Hub International
 
 Nowoczesny system do monitorowania polskich piłkarzy grających za granicą. Automatyczna synchronizacja statystyk z FBref.com z użyciem Playwright, zaawansowana analiza danych i interaktywny dashboard.
 
@@ -48,7 +48,7 @@ All player statistics in this application are sourced from **[FBref.com](https:/
 - ✅ **Non-Commercial**: Educational/portfolio project
 - ✅ **Respectful Scraping**: Following best practices and Terms of Service
 
-**Disclaimer:** Polish Players Tracker is an independent project and is not affiliated with, endorsed by, or connected to FBref.com or Sports Reference LLC. For official statistics and in-depth analysis, please visit [FBref.com](https://fbref.com/).
+**Disclaimer:** Polish Football Data Hub International is an independent project and is not affiliated with, endorsed by, or connected to FBref.com or Sports Reference LLC. For official statistics and in-depth analysis, please visit [FBref.com](https://fbref.com/).
 
 ---
 

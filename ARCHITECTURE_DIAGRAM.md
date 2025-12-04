@@ -1,4 +1,4 @@
-# 🏗️ Architektura Systemu - Polish Players Tracker
+# 🏗️ Architektura Systemu - Polish Football Data Hub International
 
 ## 📊 Diagram Kompletny
 

@@ -30,7 +30,7 @@ Next matchlogs sync: 2025-12-02 07:00:00+01:00 ✅
 **Linia 1038 w main.py:**
 ```python
 app = FastAPI(
-    title="Polish Players Tracker - API",
+    title="Polish Football Data Hub International - API",
     # ... description ...
     version="0.7.3",
     lifespan=lifespan,  # ← JEST! ✅

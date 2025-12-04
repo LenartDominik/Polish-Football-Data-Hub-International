@@ -329,4 +329,4 @@ git push
 
 **Przygotowane przez:** Rovo Dev
 **Data:** 2025-01-XX
-**Projekt:** Polish Players Tracker v0.7.4
+**Projekt:** Polish Football Data Hub International v0.7.4

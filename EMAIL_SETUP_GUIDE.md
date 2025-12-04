@@ -17,7 +17,7 @@ Email notifications są **opcjonalne**. Scheduler działa bez nich!
 1. Idź do: https://myaccount.google.com/apppasswords
 2. W "Select app" wybierz **"Mail"**
 3. W "Select device" wybierz **"Other (Custom name)"**
-4. Wpisz: "Polish Players Tracker"
+4. Wpisz: "Polish Football Data Hub International"
 5. Kliknij **"Generate"**
 6. **Skopiuj** 16-znakowe hasło (format: `xxxx xxxx xxxx xxxx`)
 
@@ -292,7 +292,7 @@ Po konfiguracji, otrzymasz emaile w formacie HTML:
 ![Email Preview]
 ```
 ┌─────────────────────────────────────────┐
-│   ✅ Polish Players Tracker             │
+│   ✅ Polish Football Data Hub International             │
 │   Scheduled Sync Report                 │
 ├─────────────────────────────────────────┤
 │ Time: 2025-01-16 06:15:32              │
@@ -308,7 +308,7 @@ Po konfiguracji, otrzymasz emaile w formacie HTML:
 │ • Player Name 2                         │
 ├─────────────────────────────────────────┤
 │ This is an automated message from       │
-│ Polish Players Tracker Scheduler        │
+│ Polish Football Data Hub International Scheduler        │
 └─────────────────────────────────────────┘
 ```
 

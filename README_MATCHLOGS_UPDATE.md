@@ -262,5 +262,5 @@ W razie problemów sprawdŸ:
 - Health check: http://localhost:8000/health
 
 ---
-**Autor:** Polish Players Tracker Team
+**Autor:** Polish Football Data Hub International Team
 **Kontakt:** Zobacz README.md

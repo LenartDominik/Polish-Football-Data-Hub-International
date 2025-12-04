@@ -281,7 +281,7 @@ def send_matchlogs_notification_email(synced: int, failed: int, total: int, tota
         status_emoji = "✅" if failed == 0 else "⚠️" if success_rate >= 80 else "❌"
         
         text_content = f"""
-Polish Players Tracker - Matchlogs Sync Report
+Polish Football Data Hub International - Matchlogs Sync Report
 {'='*60}
 
 {status_emoji} MATCHLOGS SYNC COMPLETED
@@ -323,7 +323,7 @@ Results:
 </head>
 <body>
     <div class="header">
-        <h1>📋 Polish Players Tracker</h1>
+        <h1>📋 Polish Football Data Hub International</h1>
         <h2>Matchlogs Sync Report</h2>
     </div>
     
@@ -365,7 +365,7 @@ Results:
     </div>
     
     <div class="footer">
-        <p>This is an automated message from Polish Players Tracker Scheduler</p>
+        <p>This is an automated message from Polish Football Data Hub International Scheduler</p>
     </div>
 </body>
 </html>
@@ -426,7 +426,7 @@ def send_sync_notification_email(synced: int, failed: int, total: int, duration_
         status_emoji = "✅" if failed == 0 else "⚠️" if success_rate >= 80 else "❌"
         
         text_content = f"""
-Polish Players Tracker - Scheduled Sync Report
+Polish Football Data Hub International - Scheduled Sync Report
 {'='*60}
 
 {status_emoji} SYNC COMPLETED
@@ -467,7 +467,7 @@ Results:
 </head>
 <body>
     <div class="header">
-        <h1>{status_emoji} Polish Players Tracker</h1>
+        <h1>{status_emoji} Polish Football Data Hub International</h1>
         <h2>Scheduled Sync Report</h2>
     </div>
     
@@ -506,7 +506,7 @@ Results:
     </div>
     
     <div class="footer">
-        <p>This is an automated message from Polish Players Tracker Scheduler</p>
+        <p>This is an automated message from Polish Football Data Hub International Scheduler</p>
     </div>
 </body>
 </html>
@@ -955,9 +955,9 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Scheduler zatrzymany")
 
 app = FastAPI(
-    title="Polish Players Tracker - API",
+    title="Polish Football Data Hub International - API",
     description="""
-    🇵🇱 **Polish Players Tracker API** - Real-time monitoring of 90+ Polish footballers playing abroad.
+    🇵🇱 **Polish Football Data Hub International API** - Real-time monitoring of 90+ Polish footballers playing abroad.
     
     ## 📊 Data Source & Attribution
     
@@ -1078,7 +1078,7 @@ def root():
     Returns basic information about the API and available endpoints.
     """
     return {
-        "message": "🇵🇱 Welcome to Polish Players Tracker API",
+        "message": "🇵🇱 Welcome to Polish Football Data Hub International API",
         "status": "operational",
         "data_source": {
             "name": "FBref.com",

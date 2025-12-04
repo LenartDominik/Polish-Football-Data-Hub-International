@@ -67,7 +67,7 @@ Przykładowe requesty:
 
 **💡 Wniosek:** **500 MB wystarczy dla 1000+ graczy** z pełną historią!
 
-**Przykład dla Polish Players Tracker:**
+**Przykład dla Polish Football Data Hub International:**
 ```
 98 graczy × 3 KB = 294 KB
 + match logs (10,000 meczów × 500 bytes) = 5 MB
@@ -134,7 +134,7 @@ Notifications: 10 użytkowników × 1/dzień = 300 emaili/miesiąc ✅
 
 ## 🎯 Podsumowanie Limitów (FREE Tier)
 
-| Serwis | Limit | Czy wystarczy dla Polish Players Tracker? |
+| Serwis | Limit | Czy wystarczy dla Polish Football Data Hub International? |
 |--------|-------|-------------------------------------------|
 | **Render** | 750h/miesiąc, 100 GB bandwidth | ✅ TAK (24/7, ~65k requestów/dzień) |
 | **Supabase** | 500 MB, 50k MAU | ✅ TAK (1000+ graczy, unlimited API) |
@@ -297,7 +297,7 @@ if failed_count > 0:
 
 ---
 
-## 🎯 Rekomendacje dla Polish Players Tracker
+## 🎯 Rekomendacje dla Polish Football Data Hub International
 
 ### Obecna sytuacja:
 - 98 graczy
@@ -351,7 +351,7 @@ Potem: ~$27-52/miesiąc
 
 ## 🎉 Podsumowanie
 
-### Dla Polish Players Tracker:
+### Dla Polish Football Data Hub International:
 
 **✅ DARMOWE komercyjnie gdy:**
 - < 10,000 użytkowników/miesiąc

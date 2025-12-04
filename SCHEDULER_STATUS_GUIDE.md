@@ -97,7 +97,7 @@ EMAIL_TO=recipient@example.com
 ```
 Subject: 🤖 Scheduler Sync Complete: 25/28 Players Synced
 
-Polish Players Tracker - Scheduled Sync Report
+Polish Football Data Hub International - Scheduled Sync Report
 ============================================================
 
 Status: ✅ SUCCESS
@@ -116,7 +116,7 @@ Failed Players:
 ```
 Subject: 📋 Matchlogs Sync Complete: 150 Matches from 25/28 Players
 
-Polish Players Tracker - Matchlogs Sync Report
+Polish Football Data Hub International - Matchlogs Sync Report
 ============================================================
 
 Status: ✅ SUCCESS
