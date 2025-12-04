@@ -1,20 +1,41 @@
 # 🇵🇱 Polish Football Data Hub International
 
-**Status:** ✅ Production Ready | **Database:** PostgreSQL (Supabase) | **Deployment:** Cloud-Ready
+**Status:** ✅ Production Ready | **Baza danych:** PostgreSQL (Supabase) | **Deployment:** Cloud-Ready
 
-> 📊 Real-time monitoring and analysis of 90+ Polish footballers playing abroad  
+> 📊 Monitorowanie i analiza statystyk 90+ polskich piłkarzy grających za granicą w czasie rzeczywistym
+
+## 🌐 Aplikacja Live
+
+**Wypróbuj teraz:** [https://polish-football-data-international-tracker.streamlit.app/](https://polish-football-data-international-tracker.streamlit.app/)
+
+### 📱 Jak korzystać:
+
+1. **Przeglądaj graczy** - Zobacz wszystkich śledzonych polskich piłkarzy z aktualnymi statystykami
+2. **Filtruj dane** - Użyj filtrów w sidebarze aby zawęzić według:
+   - Ligi (Bundesliga, La Liga, Serie A, itp.)
+   - Drużyny
+   - Pozycji (GK, DF, MF, FW)
+   - Typu rozgrywek (Liga, Puchary Europejskie, Reprezentacja)
+   - Sezonu
+3. **Porównaj graczy** - Kliknij "Compare Players" w sidebarze aby porównać dwóch graczy
+4. **Eksportuj dane** - Pobierz przefiltrowane dane jako CSV do własnej analizy
+
+**📊 Aktualizacje danych:** Automatyczna synchronizacja 3x w tygodniu (poniedziałek, czwartek, wtorek) z FBref.com
+
+---
+
 > ⚖️ **[Informacje prawne - Ważne!](LEGAL_NOTICE.md)** | 🚀 **[Deployment Guide](STREAMLIT_CLOUD_DEPLOYMENT.md)**
 
-## ⚖️ Legal Notice
+## ⚖️ Informacje prawne
 
-**This is an educational, non-commercial project.**
+**To jest projekt edukacyjny, niekomercyjny.**
 
-- **Data Source:** FBref.com (© Sports Reference LLC)
-- **Usage:** Educational and portfolio purposes only
-- **NOT for commercial use** without proper licensing
-- **See [LEGAL_NOTICE.md](LEGAL_NOTICE.md) for full details**
+- **Źródło danych:** FBref.com (© Sports Reference LLC)
+- **Użycie:** Wyłącznie do celów edukacyjnych i portfolio
+- **NIE do użytku komercyjnego** bez odpowiedniej licencji
+- **Zobacz [LEGAL_NOTICE.md](LEGAL_NOTICE.md) dla pełnych szczegółów**
 
-# 🇵🇱 Polish Football Data Hub International
+---
 
 Nowoczesny system do monitorowania polskich piłkarzy grających za granicą. Automatyczna synchronizacja statystyk z FBref.com z użyciem Playwright, zaawansowana analiza danych i interaktywny dashboard.
 
