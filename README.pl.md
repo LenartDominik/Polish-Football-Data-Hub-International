@@ -3,7 +3,7 @@
 **Status:** ✅ Production Ready | **Database:** PostgreSQL (Supabase) | **Deployment:** Cloud-Ready
 
 > 📊 Real-time monitoring and analysis of 90+ Polish footballers playing abroad  
-> ⚖️ **[Legal Notice - Important!](LEGAL_NOTICE.md)** | 🚀 **[Deployment Guide](STREAMLIT_CLOUD_DEPLOYMENT.md)**
+> ⚖️ **[Informacje prawne - Ważne!](LEGAL_NOTICE.md)** | 🚀 **[Deployment Guide](STREAMLIT_CLOUD_DEPLOYMENT.md)**
 
 ## ⚖️ Legal Notice
 
@@ -61,17 +61,17 @@ All player statistics in this application are sourced from **[FBref.com](https:/
 - **Cloud deployment**: gotowy do deployment na Render.com (darmowy hosting!)
 
 ### 🎨 Frontend Dashboard (Streamlit)
-**Multi-page application** with interactive dashboard and player comparison
+**Multi-page aplikacja** z interaktywnym dashboard i porównywaniem graczy
 
-#### 🏠 Main Page (`streamlit_app_cloud.py`)
-- **Interactive filtering**: league, team, position, competition type, season
-- **Player search** by name
-- **Views**: player cards, tables, top scorers charts
-- **Enhanced Stats in Details**: xGI, per 90 metrics (xG/90, xA/90, npxG/90, xGI/90, G+A/90)
-- **National Team (2025)**: Stats by calendar year (from player_matches table)
-- **Season Statistics History**: Full history of all seasons (without Shots/SoT columns)
-- **CSV Export**: export filtered data
-- **Dedicated goalkeeper statistics**
+#### 🏠 Strona główna (`streamlit_app_cloud.py`)
+- **Interaktywne filtrowanie**: liga, drużyna, pozycja, typ rozgrywek, sezon
+- **Wyszukiwanie graczy** po nazwisku
+- **Widoki**: karty graczy, tabele, wykresy top strzelców
+- **Enhanced Stats w Details**: xGI, metryki per 90 (xG/90, xA/90, npxG/90, xGI/90, G+A/90)
+- **National Team (2025)**: Statystyki kadry według roku kalendarzowego (z tabeli player_matches)
+- **Season Statistics History**: Pełna historia wszystkich sezonów (bez kolumn Shots/SoT)
+- **Export do CSV**: eksport przefiltrowanych danych
+- **Dedykowane statystyki bramkarzy**
 
 #### ⚖️ Compare Players (`pages/2_Compare_Players.py`)
 - **Porównanie side-by-side** dwóch graczy z wizualizacjami
