@@ -340,37 +340,40 @@ polish-players-tracker/
 │
 ├── app/
 │   ├── backend/                  # Backend FastAPI
-│   │   ├── main.py               # Główna afileacja + scheduler
-│   │   ├── config.py             # Configuration
+│   │   ├── main.py               # Główna aplikacja + scheduler
+│   │   ├── config.py             # Konfiguracja
 │   │   ├── database.py           # Połączenie z bazą
-│   │   ├── models/               # Modele SQLAlchemy
-│   │   │   ├── player.py
-│   │   │   ├── competition_stats.py
-│   │   │   ├── goalkeeper_stats.py
-│   │   │   └── ...
-│   │   ├── routers/              # Endpointy API
-│   │   │   ├── players.py
-│   │   │   ├── comparison.py
-│   │   │   └── matches.py
-│   │   ├── schemas/              # Pydantic schemas
+│   │   ├── models/               # Modele SQLAlchemy (ORM)
+│   │   │   ├── player.py         # Model Player
+│   │   │   ├── competition_stats.py  # Statystyki według rozgrywek
+│   │   │   ├── goalkeeper_stats.py   # Statystyki bramkarskie
+│   │   │   └── player_match.py   # Matchlogs (szczegóły meczów)
+│   │   ├── routers/              # Endpointy API (routing)
+│   │   │   ├── players.py        # GET /api/players
+│   │   │   ├── comparison.py     # GET /api/comparison/*
+│   │   │   ├── matchlogs.py      # GET /api/matchlogs/*
+│   │   │   └── ai.py             # (placeholder)
+│   │   ├── schemas/              # Pydantic schemas (walidacja)
+│   │   │   └── player.py
 │   │   └── services/             # Serwisy biznesowe
-│   │       └── fbref_playwright_scraper.py  # Główny scraper
+│   │       └── fbref_playwright_scraper.py  # Scraper FBref
 │   │
-│   └── frontend/                 # Frontend Streamlit
-│       ├── streamlit_app.py      # Główna strona
-│       ├── requirements.txt
-│       └── pages/
+│   └── frontend/                 # Frontend Streamlit (local)
+│       ├── streamlit_app.py      # Główna aplikacja
+│       ├── api_client.py         # Client API
+│       └── pages/                # Strony multi-page
 │           └── 2_⚖️_compare_players.py
 │
-├── alembic/                      # Migracje bazy danych
-│   └── versions/
+├── sync_player_full.py           # Skrypt sync pojedynczego gracza
+├── sync_competition_stats.py     # Skrypt sync statystyk
+├── sync_match_logs.py            # Skrypt sync matchlogs
+│
 │
 ├── start_backend.ps1             # Start backend
 ├── start_frontend.ps1            # Start frontend
 │
 ├── sync_player_full.py           # Sync player (all seasons: stats+matchlogs)
 ├── sync_match_logs.py            # Sync tylko matchlogs (current season)
-├── sync_missing_players.py       # Sync players bez danych
 ├── add_piatek_manual.py          # Ręczne dodanie player
 │
 └── tools/                        # Narzędzia pomocnicze

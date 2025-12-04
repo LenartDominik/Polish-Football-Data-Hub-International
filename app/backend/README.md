@@ -301,18 +301,16 @@ app/backend/
 ├── models/                # Modele SQLAlchemy (ORM)
 │   ├── __init__.py
 │   ├── player.py          # Model Player
-│   ├── competition_stats.py
-│   ├── goalkeeper_stats.py
+│   ├── competition_stats.py  # Statystyki według rozgrywek
+│   ├── goalkeeper_stats.py   # Statystyki bramkarskie
 │   ├── player_match.py    # Model PlayerMatch (matchlogs)
-│   ├── live_match.py
-│   ├── player_live_stats.py
-│   └── ...
+│   └── season_stats.py    # (deprecated - nieużywany)
 │
 ├── routers/               # Endpointy API (routing)
 │   ├── __init__.py
 │   ├── players.py         # GET /api/players
 │   ├── comparison.py      # GET /api/comparison/*
-│   ├── matches.py         # GET /api/matches/*
+│   ├── matchlogs.py       # GET /api/matchlogs/*
 │   └── ai.py              # (placeholder dla przyszłych funkcji AI)
 │
 ├── schemas/               # Pydantic schemas (walidacja)

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from .database import engine, Base, SessionLocal
 from .routers import players, comparison, matchlogs
-from .models import player, season_stats
+from .models import player
 from .models.player import Player
 from .models.competition_stats import CompetitionStats, CompetitionType
 from .models.goalkeeper_stats import GoalkeeperStats
