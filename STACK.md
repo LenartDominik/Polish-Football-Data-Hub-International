@@ -7,7 +7,7 @@ Aplikacja full-stack do śledzenia polskich piłkarzy grających za granicą.
 - **Typ:** Full-stack web application
 - **Architektura:** Monorepo (backend + frontend)
 - **Język:** Python 3.10+
-- **Baza danych:** SQLite
+- **Baza danych:** PostgreSQL (Supabase)
 - **Deployment:** Local/Self-hosted
 
 ---
@@ -31,10 +31,12 @@ Aplikacja full-stack do śledzenia polskich piłkarzy grających za granicą.
   - Deklaratywne modele
   - Query builder
   - Relationship management
-- **SQLite 3** - File-based relacyjna baza danych
-  - Zero-configuration
-  - Idealna dla projektów lokalnych
-  - Pełne wsparcie dla transakcji
+- **PostgreSQL** - Zaawansowana relacyjna baza danych
+- **Supabase** - Hosting PostgreSQL (darmowe 500MB)
+  - Automatyczne backupy
+  - Connection pooling
+  - Dashboard do zarządzania danymi
+  - ACID compliant
 
 ### Migracje
 - **Alembic 1.17+** - Database migration tool
@@ -174,8 +176,8 @@ Szczegółowe statystyki z pojedynczych meczów (matchlogs)
            │
            ▼
 ┌─────────────────────┐
-│   SQLite DB         │ ← Persistencja danych
-│   (players.db)      │
+│   PostgreSQL       │ ← Persistencja danych
+│   (Supabase)       │
 │  - players          │
 │  - competition_stats│
 │  - goalkeeper_stats │
@@ -218,7 +220,7 @@ Rekomendowane podejście:
 
 ### Environment Variables
 ```env
-DATABASE_URL=sqlite:///./players.db
+DATABASE_URL=postgresql://postgres.xxxxx:[PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
 ENABLE_SCHEDULER=false
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -277,7 +279,7 @@ python -m venv venv
 - ✅ Rate limiting (oszczędność zasobów FBref)
 
 ### Limity:
-- **SQLite:** Do ~100k rekordów (wystarczające dla projektu)
+- **PostgreSQL (Supabase):** Skalowalne, darmowe 500MB, automatyczne backupy
 - **Scraper:** ~12 sekund per gracz (FBref ToS)
 - **Streamlit:** ~1 GB RAM (free tier)
 
@@ -318,7 +320,7 @@ python -m venv venv
 ## 🔮 Przyszłe rozszerzenia (opcjonalne)
 
 ### Backend:
-- [ ] PostgreSQL zamiast SQLite (dla większej skali)
+- [x] PostgreSQL (Supabase) - zaimplementowane!
 - [ ] Redis cache dla częstych zapytań
 - [ ] WebSockets dla real-time updates
 - [ ] GraphQL API (jako alternatywa dla REST)

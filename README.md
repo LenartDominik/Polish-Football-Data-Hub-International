@@ -66,7 +66,7 @@ All player statistics in this application are sourced from **[FBref.com](https:/
 ### 📊 Backend API (FastAPI)
 - **RESTful API** z automatyczną dokumentacją Swagger/ReDoc
 - **Endpointy**: gracze, porównania, statystyki, matchlogs, mecze live (w budowie)
-- **Baza danych**: SQLite (dev) / PostgreSQL (production - Supabase darmowe!)
+- **Baza danych**: PostgreSQL (Supabase - darmowe 500MB!)
 - **Scheduler**: automatyczna synchronizacja
   - Statystyki: 2x w tygodniu (Poniedziałek/Czwartek 6:00)
   - Matchlogs: 1x w tygodniu (Wtorek 7:00)
@@ -75,18 +75,33 @@ All player statistics in this application are sourced from **[FBref.com](https:/
 - **Cloud deployment**: gotowy do deployment na Render.com (darmowy hosting!)
 
 ### 🎨 Frontend Dashboard (Streamlit)
+**Multi-page aplikacja** z interaktywnym dashboard i porównywaniem graczy
+
+#### 🏠 Strona główna (`streamlit_app_cloud.py`)
 - **Interaktywne filtrowanie**: liga, drużyna, pozycja, typ rozgrywek, sezon
 - **Wyszukiwanie graczy** po nazwisku
 - **Widoki**: karty graczy, tabele, wykresy top strzelców
 - **Enhanced Stats w Details**: xGI, metryki per 90 (xG/90, xA/90, npxG/90, xGI/90, G+A/90)
-- **Porównanie graczy**: side-by-side z wizualizacjami
-  - ⚽ Field players vs field players
-  - 🧤 Goalkeepers vs goalkeepers
-  - ⚠️ Blokada nieprawidłowych porównań (GK vs field player)
 - **National Team (2025)**: Statystyki kadry według roku kalendarzowego (z tabeli player_matches)
 - **Season Statistics History**: Pełna historia wszystkich sezonów (bez kolumn Shots/SoT)
 - **Export do CSV**: eksport przefiltrowanych danych
 - **Dedykowane statystyki bramkarzy**
+
+#### ⚖️ Compare Players (`pages/2_Compare_Players.py`)
+- **Porównanie side-by-side** dwóch graczy z wizualizacjami
+- ⚽ Field players vs field players
+- 🧤 Goalkeepers vs goalkeepers  
+- ⚠️ Blokada nieprawidłowych porównań (GK vs field player)
+- 📊 Wykresy radarowe i słupkowe
+- 📈 Porównanie statystyk per 90 minut
+
+#### 🔌 API Client (`api_client.py`)
+- **Inteligentne połączenie z backendem**:
+  - ☁️ Streamlit Cloud: używa `st.secrets["BACKEND_API_URL"]`
+  - 💻 Lokalnie: używa `os.getenv("API_BASE_URL")` lub `localhost:8000`
+  - ✅ Automatyczne wykrywanie środowiska
+- **Error handling**: czytelne komunikaty błędów
+- **Caching**: optymalizacja zapytań do API
 
 ### 🔄 Synchronizacja danych
 - **CLI Scripts**: `sync_player_full.py`, `sync_match_logs.py`
@@ -131,7 +146,7 @@ Backend na Render automatycznie synchronizuje wszystkich graczy:
 ### Wymagania wstępne
 - Python 3.10+
 - Playwright (Chromium)
-- SQLite (development) / PostgreSQL (production)
+- PostgreSQL (Supabase - darmowe dla projektów hobby)
 
 ### 1. Instalacja zależności
 
@@ -294,8 +309,10 @@ polish-players-tracker/
 ├── .env.example                  # Przykładowa konfiguracja
 ├── .gitignore
 ├── requirements.txt              # Zależności Python
-├── players.db                    # Baza danych SQLite (dev tylko!)
-├── migrate_sqlite_to_postgres.py # Skrypt migracji do Supabase
+├── api_client.py                 # API client dla Streamlit (obsługa st.secrets)
+├── streamlit_app_cloud.py        # Główna aplikacja Streamlit Cloud
+├── pages/                        # Strony Streamlit (multi-page app)
+│   └── 2_Compare_Players.py      # Strona porównywania graczy
 ├── README.md                     # Ten plik
 │
 ├── venv/                         # Środowisko wirtualne Python
@@ -341,27 +358,27 @@ polish-players-tracker/
 
 ## 🗄️ Baza danych
 
-### 📦 Development (lokalnie)
-- **SQLite** (`players.db`) - szybkie, proste, bez konfiguracji
+### 💾 PostgreSQL (Supabase)
+- **Jedyna wspierana baza danych** - stabilna, skalowalna, darmowa!
+- ✅ **500 MB storage** (wystarczy dla setek graczy)
+- ✅ **Automatyczne backupy**
+- ✅ **Dashboard do przeglądania danych**
+- ✅ **Connection pooling**
+- ✅ **DARMOWE NA ZAWSZE** dla projektów hobby!
 
-### ☁️ Production (Render/Streamlit Cloud)
-- **PostgreSQL (Supabase)** - DARMOWE NA ZAWSZE! ✅
-- 500 MB storage (wystarczy dla setek graczy)
-- Automatyczne backupy
-- Dashboard do przeglądania danych
-- 📖 **[Instrukcja migracji (15 minut)](SUPABASE_MIGRATION_GUIDE.md)**
-
-**Dlaczego nie SQLite w chmurze?**
-- ❌ Render Free: dane znikają przy każdym restarcie (filesystem efemeryczny)
-- ❌ Streamlit Cloud: read-only filesystem (scheduler nie może zapisywać)
-- ✅ **Rozwiązanie**: Supabase PostgreSQL (też darmowe!)
-
-### 🔄 Migracja (3 proste komendy):
+### 🚀 Konfiguracja (5 minut):
 ```powershell
-python migrate_sqlite_to_postgres.py export   # Eksport z SQLite
-python migrate_sqlite_to_postgres.py import   # Import do Supabase
-python migrate_sqlite_to_postgres.py verify   # Sprawdzenie
+# 1. Zarejestruj się: https://supabase.com (DARMOWE!)
+# 2. Utwórz projekt
+# 3. Skopiuj DATABASE_URL z Settings → Database → Connection string
+# 4. Dodaj do .env:
+DATABASE_URL=postgresql://postgres.xxxxx:[YOUR-PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
+
+# 5. Uruchom migracje (tworzy tabele):
+alembic upgrade head
 ```
+
+**📖 Szczegółowa instrukcja:** [SUPABASE_GUIDE.md](SUPABASE_GUIDE.md)
 
 ---
 
@@ -548,7 +565,7 @@ python tools/check_reqs.py
 - ✅ **$0/miesiąc** - całkowicie darmowe!
 - ✅ **24/7 uptime** - scheduler działa bez Twojego komputera
 - ✅ **Automatyczne deploye** - push do GitHub = auto update
-- ✅ **Persistent disk** - baza danych nie ginie
+- ✅ **Supabase PostgreSQL** - baza danych w chmurze (darmowe!)
 - ✅ **Email notifications** - działają w chmurze
 
 **Setup (15 minut):**

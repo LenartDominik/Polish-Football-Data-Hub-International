@@ -61,7 +61,7 @@ EMAIL_TO=gdzie-wyslac@gmail.com
 
 #### 3. Dodaj Persistent Disk dla bazy danych
 
-**WAŻNE**: Render Free nie wspiera PostgreSQL, więc używamy SQLite z persistent disk.
+**WAŻNE**: Używamy Supabase PostgreSQL (darmowe!) - dane są bezpieczne w chmurze.
 
 1. W ustawieniach serwisu przejdź do **"Disks"**
 2. Kliknij **"Add Disk"**
@@ -164,7 +164,7 @@ I zmodyfikuj `main.py` aby używał tego timezone.
 **Plan FREE**: $0/miesiąc
 - Backend działa 24/7 ✅
 - Scheduler synchronizuje automatycznie ✅
-- ⚠️ **WAŻNE**: SQLite NIE działa (dane znikają przy restarcie!)
+- ✅ **PostgreSQL (Supabase)**: Dane są bezpieczne w chmurze z automatycznymi backupami
 - ✅ **ROZWIĄZANIE**: Użyj Supabase PostgreSQL (też DARMOWE!)
 
 **Supabase PostgreSQL**: $0/miesiąc (darmowe NA ZAWSZE)

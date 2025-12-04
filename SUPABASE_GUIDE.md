@@ -103,33 +103,13 @@ Możesz również zobaczyć dane bezpośrednio w Supabase:
 
 ---
 
-## 🔄 Jak wrócić do SQLite?
-
-Jeśli chcesz wrócić do lokalnej bazy SQLite:
-
-### **Opcja 1: Zmień .env**
-```env
-DATABASE_URL=sqlite:///./players.db
-```
-
-### **Opcja 2: Użyj zmiennej środowiskowej**
-```powershell
-$env:DATABASE_URL = "sqlite:///./players.db"
-streamlit run app/frontend/streamlit_app.py
-```
-
----
-
 ## 📝 Ważne informacje
 
-### **Dane w Supabase:**
-- **Gracze:** 3 (Lewandowski, Cash, Fabiański)
-- **Statystyki:** 9 rekordów (głównie Lewandowski)
-- **Sezon:** 2024-2025
-
-### **Dane w SQLite (stara baza):**
-- **Gracze:** 98
-- **Pełna historia statystyk**
+### **PostgreSQL to jedyna wspierana baza danych**
+- ✅ Stabilna, skalowalna, produkcyjna
+- ✅ Automatyczne backupy w Supabase
+- ✅ Dashboard do zarządzania danymi
+- ✅ DARMOWE 500MB dla projektów hobby!
 
 ### **Zalecenia:**
 

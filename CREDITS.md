@@ -47,7 +47,8 @@ This project is built on top of amazing open source technologies:
 
 **Development:**
 - [Python](https://www.python.org/) - Programming language
-- [SQLite](https://www.sqlite.org/) - Lightweight database engine
+- [PostgreSQL](https://www.postgresql.org/) - Powerful open-source database
+- [Supabase](https://supabase.com/) - Open-source Firebase alternative (PostgreSQL hosting)
 
 Full list of dependencies in `requirements.txt`.
 

@@ -13,7 +13,64 @@
 
 ---
 
-Interaktywny dashboard w Streamlit do przeglądania i analizy danych polskich piłkarzy grających za granicą.
+**Multi-page** interaktywny dashboard w Streamlit do przeglądania i analizy danych polskich piłkarzy grających za granicą.
+
+## 📁 Struktura Frontend
+
+### Dla lokalnego uruchomienia:
+```
+app/frontend/
+├── streamlit_app.py          # Główna aplikacja (local)
+├── api_client.py              # API client
+├── requirements.txt
+└── pages/
+    └── 2_⚖️_compare_players.py  # Strona porównywania
+```
+
+### Dla Streamlit Cloud:
+```
+root/
+├── streamlit_app_cloud.py     # Główna aplikacja (cloud)
+├── api_client.py              # API client (obsługa st.secrets)
+├── requirements.txt
+└── pages/
+    └── 2_Compare_Players.py   # Strona porównywania
+```
+
+**Kluczowa różnica:** Streamlit Cloud wymaga plików w root repozytorium Git.
+
+## 🔌 API Client
+
+### Automatyczne wykrywanie środowiska:
+
+```python
+# api_client.py obsługuje 3 scenariusze:
+
+# 1. Streamlit Cloud (priorytet #1)
+st.secrets["BACKEND_API_URL"]  # z Streamlit Cloud Secrets
+
+# 2. Lokalne środowisko (priorytet #2)
+os.getenv("API_BASE_URL")  # z pliku .env
+
+# 3. Domyślny fallback (priorytet #3)
+"http://localhost:8000"  # jeśli nic nie jest skonfigurowane
+```
+
+### Konfiguracja:
+
+**Lokalnie:**
+```powershell
+# Dodaj do .env (opcjonalne):
+API_BASE_URL=http://localhost:8000
+```
+
+**Streamlit Cloud:**
+```toml
+# Settings → Secrets (WYMAGANE!):
+BACKEND_API_URL = "https://your-backend.onrender.com"
+```
+
+📖 **Szczegóły:** [STREAMLIT_SECRETS_SETUP.md](../../STREAMLIT_SECRETS_SETUP.md)
 
 ## 📊 Najnowsze Zmiany (v0.7.4)
 

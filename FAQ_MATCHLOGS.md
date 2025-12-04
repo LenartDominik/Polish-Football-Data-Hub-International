@@ -58,7 +58,7 @@ Sprawdź sekcję `"scheduler"` w odpowiedzi.
 **A:** Dla każdego meczu: data, przeciwnik, wynik, minuty, gole, asysty, xG, xA, strzały, podania, dryblingi, odbiory, kartki i więcej (23 pola).
 
 #### Q: Czy dane są zapisywane lokalnie?
-**A:** Tak, w SQLite (plik `players.db`). Na Render używaj persistent disk.
+**A:** Tak, w PostgreSQL (Supabase). Dane są bezpieczne w chmurze z automatycznymi backupami.
 
 #### Q: Jak długo przechowywane są dane?
 **A:** Zawsze. Dane są zastępowane przy każdej synchronizacji (usuwa stare, dodaje nowe).
@@ -160,7 +160,7 @@ curl http://localhost:8000/api/players/1/matches?season=2025-2026
 ### 💾 Baza Danych
 
 #### Q: Gdzie są przechowywane matchlogi?
-**A:** W tabeli `player_matches` w SQLite.
+**A:** W tabeli `player_matches` w PostgreSQL (Supabase).
 
 #### Q: Jak eksportować dane?
 **A:** 
@@ -168,12 +168,11 @@ curl http://localhost:8000/api/players/1/matches?season=2025-2026
 # Przez API
 curl http://localhost:8000/api/players/1/matches > matches.json
 
-# Bezpośrednio z bazy
-sqlite3 players.db "SELECT * FROM player_matches;"
+# Lub użyj Supabase Dashboard → Table Editor → Export CSV
 ```
 
-#### Q: Czy mogę użyć PostgreSQL zamiast SQLite?
-**A:** Tak, zmień `DATABASE_URL` w `.env`. SQLAlchemy wspiera PostgreSQL.
+#### Q: Jak zarządzać bazą danych?
+**A:** Użyj **Supabase Dashboard** - masz tam Table Editor, SQL Editor, i możliwość exportu danych.
 
 ---
 

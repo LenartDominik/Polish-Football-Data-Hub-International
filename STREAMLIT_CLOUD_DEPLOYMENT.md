@@ -71,7 +71,7 @@ Ten przewodnik pokazuje jak wdrożyć **Polish Players Tracker** na Streamlit Cl
 │                            │                                │
 │                            ▼                                │
 │  ┌───────────────────────────────────────────────────────┐ │
-│  │  SQLite Database (players.db)                         │ │
+│  │  PostgreSQL Database (Supabase)                        │ │
 │  │  - Persistent Disk (nie ginie przy redeploy)          │ │
 │  │  - Tabele: players, competition_stats, player_matches │ │
 │  └───────────────────────────────────────────────────────┘ │
@@ -151,7 +151,7 @@ disk:
   sizeGB: 1
 envVars:
   - key: DATABASE_URL
-    value: sqlite:////data/players.db
+    value: postgresql://postgres.xxxxx:[PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
 ```
 
 **Nic nie musisz zmieniać!** ✅
@@ -277,7 +277,7 @@ https://yourapp.streamlit.app
 
 ```bash
 # W render.yaml (już skonfigurowane)
-DATABASE_URL=sqlite:////data/players.db
+DATABASE_URL=postgresql://postgres.xxxxx:[PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
 PORT=8000
 PYTHON_VERSION=3.11.0
 ```

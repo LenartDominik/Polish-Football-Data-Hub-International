@@ -45,9 +45,15 @@ Serwer będzie dostępny pod adresem: **http://127.0.0.1:8000**
 
 ### 2. Dokumentacja API
 
-Interaktywna dokumentacja API:
-- **Swagger UI:** http://127.0.0.1:8000/docs
-- **ReDoc:** http://127.0.0.1:8000/redoc
+Interaktywna dokumentacja API (automatycznie generowana przez FastAPI):
+- **Swagger UI:** http://localhost:8000/docs - testuj endpointy w przeglądarce
+- **ReDoc:** http://localhost:8000/redoc - czytelna dokumentacja
+
+**💡 Swagger UI pozwala:**
+- ✅ Testować wszystkie endpointy bez Postmana
+- ✅ Zobacz request/response schemas
+- ✅ Przykładowe requesty i responses
+- ✅ Automatyczna walidacja parametrów
 
 ## 📡 Endpointy API
 

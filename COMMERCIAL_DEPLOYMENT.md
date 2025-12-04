@@ -75,8 +75,8 @@ postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
 #### 3. Zaktualizuj .env
 
 ```env
-# Stary (SQLite):
-# DATABASE_URL=sqlite:///./players.db
+# PostgreSQL (Supabase) - JEDYNA WSPIERANA BAZA:
+DATABASE_URL=postgresql://postgres.xxxxx:[PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
 
 # Nowy (Supabase PostgreSQL):
 DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres

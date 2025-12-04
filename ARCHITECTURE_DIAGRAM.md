@@ -79,8 +79,8 @@
 │                                                                                 │
 │  ┌─────────────────────────────────────────────────────────────────────────┐   │
 │  │                                                                         │   │
-│  │  💾 SQLite Database (players.db)                                        │   │
-│  │  Persistent Disk: /data/players.db (1GB)                                │   │
+│  │  💾 PostgreSQL Database (Supabase)                                       │   │
+│  │  Cloud-hosted with automatic backups (500MB free)                       │   │
 │  │                                                                         │   │
 │  │  Tabele:                                                                │   │
 │  │  ┌──────────────────┐  ┌─────────────────────┐  ┌──────────────────┐  │   │
@@ -169,7 +169,7 @@ Playwright Scraper
     ↓
 FBref.com → Parse HTML → Extract Stats
     ↓
-SQLite Database (players.db)
+PostgreSQL Database (Supabase)
 ```
 
 ### 2. Wyświetlanie Danych (User Request)
@@ -180,7 +180,7 @@ Streamlit Cloud (Frontend)
     ↓
 REST API Request → Render Backend (FastAPI)
     ↓
-Query SQLite Database
+Query PostgreSQL Database
     ↓
 Return JSON Response
     ↓
@@ -210,7 +210,7 @@ User sees Dashboard
 | **Services** | `app/backend/services/*.py` | Business logic |
 | **Scraper** | `services/fbref_playwright_scraper.py` | Web scraping |
 
-### Database (SQLite)
+### Database (PostgreSQL)
 | Tabela | Rekordy | Opis |
 |--------|---------|------|
 | **players** | ~100 | Podstawowe info o graczach |
