@@ -16,7 +16,7 @@ Full-stack web application for tracking Polish footballers playing abroad.
 ## 🔧 Backend (API)
 
 ### Framework
-- **FastAPI 0.120+** - Nowoczesny, szybki framework do budowy REST API
+- **FastAPI 0.115+** - Nowoczesny, szybki framework do budowy REST API
   - Automatyczna walidacja danych (Pydantic)
   - Auto-generowana dokumentacja (Swagger UI + ReDoc)
   - Obsługa async/await
@@ -40,7 +40,7 @@ Full-stack web application for tracking Polish footballers playing abroad.
   - ACID compliant
 
 ### Migracje
-- **Alembic 1.17+** - Database migration tool
+- **Alembic 1.13+** - Database migration tool
   - Version control dla schematu bazy
   - Auto-generowane migracje
   - Rollback support
@@ -183,7 +183,6 @@ Szczegółowe statystyki z pojedynczych meczów (matchlogs)
 │  - competition_stats│
 │  - goalkeeper_stats │
 │  - player_matches   │  ← matchlogs (szczegóły meczów)
-│  - player_matches   │ ← Matchlogs
 └──────────┬──────────┘
            │
       ┌────┴────┐
@@ -307,14 +306,17 @@ python -m venv venv
 - **ReDoc:** http://127.0.0.1:8000/redoc
 
 ### Ręczna:
-- **README.md** - Główna dokumentacja
+- **README.md** - Główna dokumentacja (angielska)
+- **README.pl.md** - Główna dokumentacja (polska)
 - **LEGAL_NOTICE.md** ⚠️ - Informacje prawne (WAŻNE!)
-- **STACK.md** - Ten plik
-- **STREAMLIT_CLOUD_DEPLOYMENT.md** - Przewodnik deployment
-- **ARCHITECTURE_DIAGRAM.md** - Diagramy architektury
-- **API_DOCUMENTATION.md** - Dokumentacja API
-- **CLASSIFICATION_RULES.md** - Zasady klasyfikacji rozgrywek
-- **DOCUMENTATION_INDEX.md** - Indeks wszystkich dokumentów
+- **LEGAL_NOTICE.pl.md** - Polska wersja informacji prawnych
+- **STACK.md** - Stack technologiczny (angielska)
+- **STACK.pl.md** - Ten plik (Stack technologiczny - polska)
+- **STREAMLIT_CLOUD_DEPLOYMENT.pl.md** - Przewodnik deployment (Streamlit Cloud)
+- **API_DOCUMENTATION.md** - Dokumentacja API (angielska)
+- **API_DOCUMENTATION.pl.md** - Dokumentacja API (polska)
+- **TROUBLESHOOTING.md** - Przewodnik rozwiązywania problemów
+- **DEPLOYMENT.md** - Ogólny przewodnik deployment
 
 ---
 
@@ -345,10 +347,11 @@ python -m venv venv
 ## 📝 Wersjonowanie
 
 - **Python:** 3.10+
-- **FastAPI:** 0.120+
+- **FastAPI:** 0.115+
 - **Streamlit:** 1.51+
 - **Playwright:** 1.48+
 - **SQLAlchemy:** 2.0+
+- **Alembic:** 1.13+
 
 **Ostatnia aktualizacja:** Styczeń 2025  
 **Wersja projektu:** 0.7.3

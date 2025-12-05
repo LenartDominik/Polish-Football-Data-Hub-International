@@ -123,7 +123,7 @@ We are exploring official API alternatives:
   - Web scraping with Playwright
   - REST API development with FastAPI
   - Frontend development with Streamlit
-  - Database design (SQLite/PostgreSQL)
+  - Database design (PostgreSQL)
   - Cloud deployment (Render, Streamlit Cloud)
   - Data visualization with Plotly
 

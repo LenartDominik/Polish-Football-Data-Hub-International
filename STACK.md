@@ -20,7 +20,7 @@ This platform showcases automated data pipeline: **web scraping** (Playwright) �
 ## 🔧 Backend (API)
 
 ### Framework
-- **FastAPI 0.120+** - Modern, fast framework for building REST APIs
+- **FastAPI 0.115+** - Modern, fast framework for building REST APIs
   - Automatic data validation (Pydantic)
   - Auto-generated documentation (Swagger UI + ReDoc)
   - Obsługa async/await
@@ -44,7 +44,7 @@ This platform showcases automated data pipeline: **web scraping** (Playwright) �
   - ACID compliant
 
 ### Migracje
-- **Alembic 1.17+** - Database migration tool
+- **Alembic 1.13+** - Database migration tool
   - Version control dla schematu bazy
   - Auto-generowane migracje
   - Rollback support
@@ -187,7 +187,6 @@ Szczegółowe statystyki z pojedynczych meczów (matchlogs)
 │  - competition_stats│
 │  - goalkeeper_stats │
 │  - player_matches   │  ← matchlogs (szczegóły meczów)
-│  - player_matches   │ ← Matchlogs
 └──────────┬──────────┘
            │
       ┌────┴────┐
@@ -312,13 +311,15 @@ python -m venv venv
 
 ### Ręczna:
 - **README.md** - Główna dokumentacja
+- **README.pl.md** - Polska wersja głównej dokumentacji
 - **LEGAL_NOTICE.md** ⚠️ - Informacje prawne (WAŻNE!)
-- **STACK.md** - This file
-- **STREAMLIT_CLOUD_DEPLOYMENT.md** - Deployment guide
-- **ARCHITECTURE_DIAGRAM.md** - Architecture diagrams
+- **STACK.md** - This file (Technology Stack)
+- **STACK.pl.md** - Polska wersja (Stack Technologiczny)
+- **STREAMLIT_CLOUD_DEPLOYMENT.pl.md** - Deployment guide (Streamlit Cloud)
 - **API_DOCUMENTATION.md** - API documentation
-- **CLASSIFICATION_RULES.md** - Competition classification rules
-- **DOCUMENTATION_INDEX.md** - Indeks wszystkich dokumentów
+- **API_DOCUMENTATION.pl.md** - Polska wersja dokumentacji API
+- **TROUBLESHOOTING.md** - Troubleshooting guide
+- **DEPLOYMENT.md** - General deployment guide
 
 ---
 
@@ -349,10 +350,11 @@ python -m venv venv
 ## 📝 Wersjonowanie
 
 - **Python:** 3.10+
-- **FastAPI:** 0.120+
+- **FastAPI:** 0.115+
 - **Streamlit:** 1.51+
 - **Playwright:** 1.48+
 - **SQLAlchemy:** 2.0+
+- **Alembic:** 1.13+
 
 **Ostatnia aktualizacja:** Styczeń 2025  
 **Wersja projektu:** 0.7.3

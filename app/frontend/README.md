@@ -39,9 +39,21 @@ root/
 
 **Kluczowa różnica:** Streamlit Cloud wymaga plików w root repozytorium Git.
 
-## 🔌 API Client
+## 🔌 API Client - Różnice między Local vs Cloud
 
-### Automatyczne wykrywanie środowiska:
+### 📁 Dwie wersje aplikacji Streamlit:
+
+#### 1️⃣ **Local Development** (`app/frontend/streamlit_app.py`)
+- Używany podczas lokalnego developmentu
+- Uruchamiany przez: `.\start_frontend.ps1` lub `streamlit run app/frontend/streamlit_app.py`
+- API URL z `.env`: `API_BASE_URL=http://localhost:8000`
+
+#### 2️⃣ **Streamlit Cloud** (`streamlit_app_cloud.py` w root)
+- Używany na Streamlit Cloud deployment
+- Pliki muszą być w root repozytorium (wymaganie Streamlit Cloud)
+- API URL z Streamlit Secrets: `BACKEND_API_URL = "https://your-backend.onrender.com"`
+
+### Automatyczne wykrywanie środowiska (api_client.py):
 
 ```python
 # api_client.py obsługuje 3 scenariusze:
@@ -60,7 +72,7 @@ os.getenv("API_BASE_URL")  # z pliku .env
 
 **Lokalnie:**
 ```powershell
-# Dodaj do .env (opcjonalne):
+# Dodaj do .env (opcjonalne - domyślnie localhost:8000):
 API_BASE_URL=http://localhost:8000
 ```
 
@@ -70,18 +82,7 @@ API_BASE_URL=http://localhost:8000
 BACKEND_API_URL = "https://your-backend.onrender.com"
 ```
 
-📖 **Szczegóły:** [STREAMLIT_SECRETS_SETUP.md](../../STREAMLIT_SECRETS_SETUP.md)
-
-## 📊 Najnowsze Zmiany (v0.7.4)
-
-### ✅ Poprawki:
-1. **Season Total** - Teraz uwzględnia mecze reprezentacji z roku kalendarzowego (2025)
-2. **European Cups Details** - Pokazuje wszystkie europejskie puchary osobno (dla graczy z wieloma pucharami)
-3. **Compare Players** - Ograniczone tylko do aktualnego sezonu 2025-26
-
-### ⚠️ Znane Ograniczenia:
-- **Kwalifikacje Champions League:** FBref agreguje kwalifikacje CL z Europa League jako "Europa Lg" (standard branżowy)
-- Zobacz: `../../LIMITATION_CHAMPIONS_LEAGUE_QUALIFICATIONS.md`
+📖 **Szczegóły deployment:** [STREAMLIT_CLOUD_DEPLOYMENT.pl.md](../../STREAMLIT_CLOUD_DEPLOYMENT.pl.md)
 
 ## 🚀 Szybki start
 
@@ -229,31 +230,15 @@ streamlit run streamlit_app.py --server.port 8502
 
 ### Brak danych graczy
 - Upewnij się, że backend jest uruchomiony
-- Sprawdź czy baza danych `players.db` zawiera dane
-- Zsynchronizuj graczy: `# Removed - use scheduler on Render (automatic sync Mon/Thu/Tue)`
+- Sprawdź połączenie z bazą danych (PostgreSQL/Supabase)
+- Zsynchronizuj graczy: `python sync_player_full.py "Nazwisko Gracza" --all-seasons`
+- Lub użyj schedulera na Render (automatyczna synchronizacja Pon/Czw/Wt)
 
 ### Błąd importu modułów
 ```powershell
 # Zainstaluj wszystkie zależności
 pip install -r requirements.txt
 ```
-
-### Season Total nie zawiera meczów reprezentacji
-
-**Problem rozwiązany w v0.7.4:**
-- Dodano funkcję `get_season_filters()` która automatycznie uwzględnia rok kalendarzowy (2025) dla reprezentacji
-- Season Total teraz sumuje: Liga + Puchary + Reprezentacja
-
-### European Cups - brakuje niektórych rozgrywek
-
-**Uwaga:**
-- FBref agreguje kwalifikacje Champions League z Europa League jako "Europa Lg"
-- To jest **standard branżowy**, nie błąd aplikacji
-- Zobacz: `LIMITATION_CHAMPIONS_LEAGUE_QUALIFICATIONS.md`
-
-### Dashboard się nie odświeża
-- Naciśnij `R` w przeglądarce aby wymusić odświeżenie
-- Lub użyj przycisku "Rerun" w prawym górnym rogu
 
 ## 📚 Technologie
 
@@ -262,42 +247,13 @@ pip install -r requirements.txt
 - **Plotly 5.18+** - interaktywne wykresy
 - **Requests 2.32+** - komunikacja z API
 
-## 🆕 Co Nowego w v0.7.3
-
-### Enhanced Stats dla zawodników z pola:
-- ✅ **xGI** (Expected Goal Involvement = xG + xA)
-- ✅ **Metryki per 90** (G+A/90, xG/90, xA/90, npxG/90, xGI/90)
-- ✅ **Uproszczony Season Total** (tylko kluczowe statystyki)
-- ✅ Warunkowe wyświetlanie xG stats (tylko gdy > 0)
-
-### Reprezentacja Narodowa (2025):
-- ✅ **Statystyki według roku kalendarzowego** - używa tabeli player_matches
-- ✅ **Wykluczono Nations League 2024-2025** - wszystkie mecze były w 2024
-- ✅ **Poprawne liczenie meczów** - tylko mecze z 2025 roku
-- ✅ Usunięto Shots/SoT z Season Statistics History
-
-### Porównywanie zawodników:
-- ✅ **Pełne wsparcie dla bramkarzy** - GK vs GK z dedykowanymi statystykami
-- ✅ **Walidacja typu gracza** - blokada GK vs field player
-- ✅ **Dynamiczne kategorie statystyk** - dostosowane do typu gracza
-- ✅ **Wizualne wskazanie typu** - 🧤 "Comparing goalkeepers" vs ⚽ "Comparing field players"
-
-**Zobacz więcej:** [FINAL_COMPLETE_SUMMARY_v0.7.3.md](../../FINAL_COMPLETE_SUMMARY_v0.7.3.md)
-
 ## 🔗 Powiązane komponenty
 
 - **Backend API:** `app/backend/` (FastAPI)
-- **Baza danych:** `players.db` (katalog główny)
+- **Baza danych:** PostgreSQL (Supabase) - produkcyjna baza danych
 - **Dokumentacja projektu:** `README.md` (katalog główny)
+- **Deployment guide:** `STREAMLIT_CLOUD_DEPLOYMENT.pl.md`
 
-## 📖 Dokumentacja szczegółowa
-
-- [VISUAL_COMPARISON_GUIDE.md](../../VISUAL_COMPARISON_GUIDE.md) - Przewodnik wizualny porównań
-- [QUICK_START_COMPARISON.md](../../QUICK_START_COMPARISON.md) - Szybki start z porównaniami
-- [FRONTEND_TESTING_CHECKLIST.md](../../FRONTEND_TESTING_CHECKLIST.md) - Checklist testowania
-- [STREAMLIT_CLOUD_DEPLOYMENT.md](../../STREAMLIT_CLOUD_DEPLOYMENT.md) - Deployment na Streamlit Cloud
-
-## 🎯 Kluczowe Zmiany Techniczne
 
 ### National Team (2025) - Rok Kalendarzowy
 ```python
@@ -307,25 +263,4 @@ pip install -r requirements.txt
 # WAŻNE: Wykluczono Nations League 2024-2025 (mecze w 2024)
 ```
 
-### Enhanced Stats - Obliczanie Metryk
-```python
-# xGI = xG + xA
-def calculate_xgi(xg, xa):
-    return (xg or 0.0) + (xa or 0.0)
-
-# Metryki per 90
-def calculate_per_90(value, minutes):
-    return (value / minutes) * 90 if minutes > 0 else 0.0
-```
-
-### Porównywanie - Walidacja Typu
-```python
-# Automatyczna detekcja typu gracza
-player1_is_gk = player1_data['is_goalkeeper']
-player2_is_gk = player2_data['is_goalkeeper']
-
-# Blokada nieprawidłowych porównań
-if player1_is_gk != player2_is_gk:
-    st.error("⚠️ You cannot compare goalkeepers with field players!")
-```
 

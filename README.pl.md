@@ -39,7 +39,7 @@ Projekt demonstruje wykorzystanie **web scrapingu** do regularnego pobierania i 
 
 ---
 
-> ⚖️ **[Informacje prawne - Ważne!](LEGAL_NOTICE.md)** | 🚀 **[Deployment Guide](STREAMLIT_CLOUD_DEPLOYMENT.md)**
+> ⚖️ **[Informacje prawne - Ważne!](LEGAL_NOTICE.md)** | 🚀 **[Deployment Guide](STREAMLIT_CLOUD_DEPLOYMENT.pl.md)**
 
 ## ⚖️ Informacje prawne
 
@@ -87,7 +87,7 @@ All player statistics in this application are sourced from **[FBref.com](https:/
 
 ### 📊 Backend API (FastAPI)
 - **RESTful API** z automatyczną dokumentacją Swagger/ReDoc
-- **Endpointy**: gracze, porównania, statystyki, matchlogs, mecze live (w budowie)
+- **Endpointy**: gracze, porównania, statystyki, matchlogs
 - **Baza danych**: PostgreSQL (Supabase - darmowe 500MB!)
 - **Scheduler**: automatyczna synchronizacja
   - Statystyki: 2x w tygodniu (Poniedziałek/Czwartek 6:00)
@@ -255,7 +255,7 @@ SCHEDULER_TIMEZONE=Europe/Warsaw
 - ⚠️ Backend musi być uruchomiony 24/7
 - ⚠️ Komputer musi być włączony (lub użyj cloud deployment!)
 
-**Cloud deployment:** Zobacz [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) dla darmowego hostingu 24/7!
+**Cloud deployment:** Zobacz [DEPLOYMENT.md](DEPLOYMENT.md) dla darmowego hostingu 24/7!
 
 ---
 
@@ -308,20 +308,19 @@ Scheduler automatycznie zsynchronizuje wszystkich graczy:
 ### Players
 - `GET /api/players` - Lista wszystkich graczy
 - `GET /api/players/{id}` - Szczegóły gracza
+- `GET /api/players/stats/competition` - Wszystkie statystyki ligowe/europejskie
+- `GET /api/players/stats/goalkeeper` - Wszystkie statystyki bramkarskie
+- `GET /api/players/stats/matches` - Wszystkie mecze (match logs)
 
 ### Comparison
 - `GET /api/comparison/compare` - Porównaj dwóch graczy
 - `GET /api/comparison/players/{id}/stats` - Statystyki gracza
 - `GET /api/comparison/available-stats` - Dostępne statystyki
 
-### Matches
-- `GET /api/matches/live` - Mecze live (w budowie)
-- `GET /api/matches/upcoming/{league}` - Nadchodzące mecze
-
 ### Matchlogs (Szczegóły meczów)
-- `GET /api/players/{id}/matches` - Lista meczów gracza
-- `GET /api/players/{id}/matches/stats` - Statystyki zagregowane z meczów
-- `GET /api/matches/{match_id}` - Szczegóły konkretnego meczu
+- `GET /api/matchlogs/{player_id}` - Match logs gracza (z filtrami)
+- `GET /api/matchlogs/{player_id}/stats` - Agregowane statystyki z meczów
+- `GET /api/matchlogs/match/{match_id}` - Szczegóły pojedynczego meczu
 
 ## 📁 Struktura projektu
 
@@ -330,52 +329,63 @@ polish-players-tracker/
 ├── .env                          # Konfiguracja (gitignored)
 ├── .env.example                  # Przykładowa konfiguracja
 ├── .gitignore
-├── requirements.txt              # Zależności Python
-├── api_client.py                 # API client dla Streamlit (obsługa st.secrets)
-├── streamlit_app_cloud.py        # Główna aplikacja Streamlit Cloud
-├── pages/                        # Strony Streamlit (multi-page app)
-│   └── 2_Compare_Players.py      # Strona porównywania graczy
-├── README.md                     # Ten plik
+├── requirements.txt              # Zależności Python (Backend)
+├── alembic.ini                   # Konfiguracja migracji bazy danych
 │
-├── venv/                         # Środowisko wirtualne Python
+├── api_client.py                 # API client (Streamlit Cloud)
+├── streamlit_app_cloud.py        # Główna aplikacja Streamlit Cloud
+├── pages/                        # Strony Streamlit Cloud (multi-page)
+│   └── 2_Compare_Players.py      # Porównywanie graczy (cloud)
+│
+├── sync_player_full.py           # Skrypt: pełna synchronizacja gracza
+├── sync_competition_stats.py     # Skrypt: synchronizacja statystyk z meczów
+├── sync_match_logs.py            # Skrypt: synchronizacja match logs
+│
+├── alembic/                      # Migracje bazy danych
+│   └── versions/                 # Wersje migracji
 │
 ├── app/
 │   ├── backend/                  # Backend FastAPI
+│   │   ├── __init__.py
 │   │   ├── main.py               # Główna aplikacja + scheduler
 │   │   ├── config.py             # Konfiguracja
 │   │   ├── database.py           # Połączenie z bazą
-│   │   ├── models/               # Modele SQLAlchemy
-│   │   │   ├── player.py
-│   │   │   ├── competition_stats.py
-│   │   │   ├── goalkeeper_stats.py
-│   │   │   └── ...
-│   │   ├── routers/              # Endpointy API
-│   │   │   ├── players.py
-│   │   │   ├── comparison.py
-│   │   │   └── matches.py
-│   │   ├── schemas/              # Pydantic schemas
-│   │   └── services/             # Serwisy biznesowe
-│   │       └── fbref_playwright_scraper.py  # Główny scraper
+│   │   ├── README.md             # Dokumentacja backend
+│   │   ├── models/               # Modele SQLAlchemy (ORM)
+│   │   │   ├── __init__.py
+│   │   │   ├── player.py         # Model Player
+│   │   │   ├── competition_stats.py  # Statystyki według rozgrywek
+│   │   │   ├── goalkeeper_stats.py   # Statystyki bramkarskie
+│   │   │   ├── player_match.py   # Matchlogs (szczegóły meczów)
+│   │   │   └── season_stats.py   # Statystyki sezonowe (agregowane)
+│   │   ├── routers/              # API Endpoints
+│   │   │   ├── __init__.py
+│   │   │   ├── players.py        # /api/players
+│   │   │   ├── comparison.py     # /api/comparison
+│   │   │   └── matchlogs.py      # /api/matchlogs
+│   │   ├── schemas/              # Pydantic schemas (API contracts)
+│   │   │   ├── __init__.py
+│   │   │   └── player.py         # Player response schemas
+│   │   └── services/             # Business logic
+│   │       ├── __init__.py
+│   │       └── fbref_playwright_scraper.py  # Web scraping FBref
 │   │
-│   └── frontend/                 # Frontend Streamlit
-│       ├── streamlit_app.py      # Główna strona
-│       ├── requirements.txt
-│       └── pages/
-│           └── 2_⚖️_compare_players.py
+│   └── frontend/                 # Frontend Streamlit (Local Development)
+│       ├── streamlit_app.py      # Główna aplikacja (LOCAL)
+│       ├── api_client.py         # API client
+│       ├── requirements.txt      # Zależności frontend
+│       ├── README.md             # Dokumentacja frontend
+│       └── pages/                # Strony (multi-page app)
+│           └── 2_⚖️_compare_players.py  # Porównywanie graczy (local)
 │
-├── alembic/                      # Migracje bazy danych
-│   └── versions/
+├── .streamlit/                   # Konfiguracja Streamlit
+│   ├── config.toml               # Theme i ustawienia UI
+│   └── secrets.toml.example      # Przykład secrets (BACKEND_API_URL)
 │
-├── start_backend.ps1             # Uruchom backend
-├── start_frontend.ps1            # Uruchom frontend
+├── start_backend.ps1             # Skrypt startowy backend
+├── start_frontend.ps1            # Skrypt startowy frontend
 │
-├── sync_player_full.py           # Sync gracza (wszystkie sezony: stats+matchlogs)
-├── sync_match_logs.py            # Sync tylko matchlogs (obecny sezon)
-├── sync_missing_players.py       # Sync graczy bez danych
-├── add_piatek_manual.py          # Ręczne dodanie gracza
-│
-└── tools/                        # Narzędzia pomocnicze
-    └── check_reqs.py             # Weryfikacja pakietów
+└── 
 ```
 
 ## 🗄️ Baza danych
@@ -431,10 +441,16 @@ alembic upgrade head
 
 ### Dodawanie graczy
 
-#### Ręczne dodanie gracza
-Edytuj plik `add_piatek_manual.py` jako szablon:
+Gracze są dodawani bezpośrednio do bazy danych PostgreSQL (Supabase), a następnie synchronizowani za pomocą skryptów sync.
+
+**Przykład dodania gracza:**
 ```python
-# Przykład dodania gracza
+# create_player.py
+from app.backend.database import SessionLocal
+from app.backend.models.player import Player
+
+db = SessionLocal()
+
 new_player = Player(
     name="Krzysztof Piątek",
     team="Istanbul Basaksehir",
@@ -443,32 +459,22 @@ new_player = Player(
     nationality="Poland",
     is_goalkeeper=False
 )
+
 db.add(new_player)
 db.commit()
+print(f"✅ Dodano: {new_player.name}")
+db.close()
 ```
 
-#### Synchronizacja po dodaniu
+**Następnie zsynchronizuj statystyki:**
 ```powershell
 python sync_player_full.py "Krzysztof Piątek" --all-seasons
 ```
-**Parametry:**
-- `"Imię Nazwisko"` - pełne nazwisko gracza
-- `"Klub"` - nazwa klubu
-- `"Liga"` - nazwa ligi
-- `"Pozycja"` - FW (napastnik), MF (pomocnik), DF (obrońca), GK (bramkarz)
-- `--sync` - automatycznie zsynchronizuj statystyki i matchlogs
 
 **Ta komenda:**
-1. Dodaje gracza do bazy
+1. Wyszukuje gracza na FBref.com
 2. Synchronizuje statystyki sezonowe (wszystkie sezony)
 3. Synchronizuje matchlogs (obecny sezon 2025-2026)
-
-#### Ręczne dodanie przez kod (dla deweloperów)
-```powershell
-# Edytuj plik add_piatek_manual.py i uruchom
-python add_piatek_manual.py
-```
-Plik `add_piatek_manual.py` to przykład jak dodać gracza bezpośrednio przez kod Python.
 
 ### Zarządzanie bazą
 ```powershell
@@ -505,10 +511,12 @@ python tools/check_reqs.py
 
 ### Dodawanie graczy
 
-| Co chcesz zrobić | Komenda |
-|------------------|---------|
-| 🔧 Dodaj ręcznie (edytuj szablon) | `python add_piatek_manual.py` |
-| 🔄 Synchronizuj po dodaniu | `python sync_player_full.py "Nazwisko" --all-seasons` |
+Aby dodać nowego gracza, ręcznie dodaj go do bazy danych, a następnie zsynchronizuj:
+
+```powershell
+# Synchronizuj nowego gracza (automatycznie znajdzie go na FBref)
+python sync_player_full.py "Nazwisko Gracza" --all-seasons
+```
 
 ### Uruchamianie
 
@@ -559,17 +567,17 @@ python tools/check_reqs.py
 - 📘 [Backend API - Dokumentacja](app/backend/README.md)
 - 📗 [Frontend - Dokumentacja](app/frontend/README.md)
 - 📄 [Stack technologiczny](STACK.md)
-- 📚 [Documentation Index (ENG)](DOCUMENTATION_INDEX.md) - Pełny indeks dokumentacji
-- 📚 [Dokumentacja Index (PL)](DOKUMENTACJA_INDEX.md) - Pełny indeks dokumentacji
-- 🔐 [Email Setup Guide](EMAIL_SETUP_GUIDE.md) - Konfiguracja Gmail/Outlook/SendGrid
-- 📋 [Classification Rules](CLASSIFICATION_RULES.md) - Reguły klasyfikacji rozgrywek
-- 🏗️ [Architecture Diagram](ARCHITECTURE_DIAGRAM.md) - Diagram architektury systemu
-- 🚀 [Render Deployment Guide](RENDER_DEPLOYMENT.md) - **Darmowy hosting 24/7!**
-- ☁️ [Streamlit Cloud Deployment](STREAMLIT_CLOUD_DEPLOYMENT.md) - **Darmowy hosting frontendu!**
-- 🔐 [Streamlit Secrets Setup](STREAMLIT_SECRETS_SETUP.md) - **Konfiguracja połączenia z backendem**
-- 🏢 [Commercial Deployment Guide](COMMERCIAL_DEPLOYMENT.md) - **PostgreSQL + Streamlit Cloud**
-- 📖 [API Documentation](API_DOCUMENTATION.md) - Kompletna dokumentacja API (wszystkie endpointy, przykłady)
-- 📖 [API Complete Reference](API_COMPLETE_REFERENCE.md) - Szybka referencja endpointów
+- 📖 [README (English)](README.md) - English version
+- 📖 [README (Polish)](README.pl.md) - Polska wersja
+- 💻 [Technology Stack](STACK.md) - Użyte technologie i architektura
+- 💻 [Stack Technologiczny](STACK.pl.md) - Polska wersja stacku
+- 🚀 [Deployment Guide](DEPLOYMENT.md) - **Pełny przewodnik deployment (EN)**
+- ☁️ [Streamlit Cloud Deployment](STREAMLIT_CLOUD_DEPLOYMENT.pl.md) - **Szczegółowy tutorial (PL)**
+- 📖 [API Documentation](API_DOCUMENTATION.md) - Kompletna dokumentacja API (EN)
+- 📖 [Dokumentacja API](API_DOCUMENTATION.pl.md) - Dokumentacja API (PL)
+- 🔧 [Troubleshooting](TROUBLESHOOTING.md) - Rozwiązywanie problemów
+- ⚖️ [Legal Notice](LEGAL_NOTICE.md) - Informacje prawne (EN)
+- ⚖️ [Informacje Prawne](LEGAL_NOTICE.pl.md) - Informacje prawne (PL)
 - ⚖️ [Legal Notice](LEGAL_NOTICE.md) - **WAŻNE - Przeczytaj przed użyciem!**
 - 🎓 [Credits](CREDITS.md) - Podziękowania i atrybuty
 
@@ -598,30 +606,31 @@ python tools/check_reqs.py
 5. Dodaj zmienne środowiskowe (email)
 6. Deploy!
 
-**Szczegółowa instrukcja:** [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md)
+**Szczegółowa instrukcja:** [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ---
 
-### 🏢 Opcja 2: Komercyjny Deployment (PostgreSQL + Streamlit Cloud)
+### 🏢 Opcja 2: Produkcyjny Deployment (PostgreSQL + Streamlit Cloud)
 
-**Dla aplikacji komercyjnych:**
-- ✅ **PostgreSQL** w chmurze (Supabase/Railway/Render)
-- ✅ **Streamlit Cloud** - frontend dashboard
-- ✅ **Skalowalna architektura**
-- ✅ **Automatyczne backupy**
-- ✅ **Connection pooling**
+**Aktualny stack produkcyjny:**
+- ✅ **PostgreSQL** w chmurze (Supabase - darmowe 500MB)
+- ✅ **Streamlit Cloud** - frontend dashboard (darmowe!)
+- ✅ **Render.com** - backend API + scheduler (darmowe!)
+- ✅ **Automatyczne backupy** (Supabase)
+- ✅ **Connection pooling** (Supabase)
 
-**Stack:**
+**Stack deployment:**
 ```
-Frontend: Streamlit Cloud (darmowe!)
-Backend:  Render.com (FastAPI + Scheduler)
-Database: Supabase PostgreSQL (darmowe 500 MB)
-Email:    SendGrid (darmowe 100/dzień)
+Frontend: Streamlit Cloud (FREE tier)
+Backend:  Render.com Web Service (FREE tier)
+Database: Supabase PostgreSQL (FREE 500MB)
+Sync:     Scheduler na Render (2x/tydzień stats, 1x/tydzień matchlogs)
+Email:    Gmail SMTP (opcjonalne)
 ```
 
-**Koszty:** $0-52/miesiąc (zależnie od skali)
+**Koszty:** $0/miesiąc (wszystko na darmowych tierach!)
 
-**Szczegółowa instrukcja:** [COMMERCIAL_DEPLOYMENT.md](COMMERCIAL_DEPLOYMENT.md)
+**Szczegółowa instrukcja:** [STREAMLIT_CLOUD_DEPLOYMENT.pl.md](STREAMLIT_CLOUD_DEPLOYMENT.pl.md)
 
 ---
 

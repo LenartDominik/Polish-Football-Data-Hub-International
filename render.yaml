@@ -3,7 +3,7 @@ services:
   - type: web
     name: polish-players-backend
     env: python
-    region: frankfurt  # Najbliższy region dla Polski
+    region: frankfurt  
     plan: free
     rootDirectory: polish-players-tracker
     buildCommand: |
