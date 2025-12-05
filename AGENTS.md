@@ -11,37 +11,42 @@ Utrzymuj ten dokument aktualnym przy każdej zmianie w agentach.
 
 ---
 
-## Szybkie streszczenie agentów (zalecany podział)
-Podział agentów jest sugestią; dostosuj do rzeczywistej struktury projektu:
+## Szybkie streszczenie agentów (Aktualna implementacja)
 
-- Data Ingestor
-  - Cel: pobieranie transferów, statystyk i zmian w statusie zawodników z zewnętrznych źródeł (API lig, strony klubów, open data).
-  - Format wyjściowy: surowe JSON do katalogu `data/raw/` oraz zapis do tabeli staging w Supabase.
-- Player Updater
-  - Cel: przetwarzanie danych z staging i synchronizacja do głównych tabel (players, clubs, appearances).
-  - Wyzwalanie: cron lub webhook; idempotentny.
-- Stats Aggregator
-  - Cel: agregacja meczowych/w sezonowych statystyk oraz obliczanie metryk.
-  - Rezultat: tabele/kolumny gotowe do zapytań w UI.
-- Notification Agent
-  - Cel: wysyłka powiadomień (np. Slack/email) o ważnych zmianach: transfery, kontuzje, nowe zawodniki w bazie.
-  - Ograniczenia: throttle, retry, i human approval dla ważnych komunikatów.
-- Maintenance / Housekeeping
-  - Cel: kasowanie starych logów, optymalizacja DB, archiwizacja.
+- **FBref Scraper (Data Ingestor)**
+  - **Kod:** `app/backend/services/fbref_playwright_scraper.py`
+  - **Cel:** Pobieranie danych z FBref.com przy użyciu Playwright (headless browser). Omija zabezpieczenia anty-botowe.
+  - **Działanie:** Pobiera HTML, parsuje tabelki (BeautifulSoup) i zwraca dane w formacie słowników Python.
+
+- **Sync Workers (Player Updater)**
+  - **Kod:** `sync_player_full.py`, `sync_match_logs.py`, `sync_competition_stats.py`
+  - **Cel:** Koordynacja procesu: Scraper -> Przetwarzanie danych -> Zapis do bazy danych (SQLAlchemy).
+  - **Wyzwalanie:** Ręczne (CLI) lub automatyczne przez Scheduler.
+
+- **Scheduler Agent**
+  - **Kod:** `app/backend/main.py` (APScheduler)
+  - **Cel:** Automatyczne uruchamianie synchronizacji w tle (np. w nocy).
+  - **Konfiguracja:** Interwały czasowe zdefiniowane w `main.py`.
+
+- **Notification Agent**
+  - **Kod:** `app/backend/main.py` (funkcja `send_notification_email`)
+  - **Cel:** Wysyłka raportów email po zakończeniu synchronizacji (sukces/błąd).
+  - **Wymagania:** Skonfigurowane serwery SMTP (Gmail/SendGrid).
 
 ---
 
 ## Uprawnienia i sekrety
 Zasada: najmniejsze uprawnienia (principle of least privilege).
 
-Wymagane poświadczenia:
-- SUPABASE_URL i SUPABASE_SERVICE_ROLE_KEY (lub lepiej: klucz serwisowy o ograniczonych prawach)
-  - Jeśli agent tylko czyta/zapisuje specyficzne tabele, utwórz role z ograniczonymi uprawnieniami.
-- EXTERNAL_API_KEYS (np. API lig, scraping proxies)
-- SLACK_WEBHOOK / EMAIL_SMTP credentials
+Wymagane poświadczenia (zdefiniowane w `.env` lub Render Environment):
+- `DATABASE_URL`: Connection string do bazy PostgreSQL (Supabase). Format: `postgresql://user:pass@host:port/db`.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`: Dane do wysyłki powiadomień email.
+- `EMAIL_FROM`, `EMAIL_TO`: Adresy nadawcy i odbiorcy raportów.
+
+Uwaga: Projekt nie używa bezpośrednio `SUPABASE_SERVICE_ROLE_KEY`, lecz łączy się przez standardowy protokół PostgreSQL.
 
 Dobre praktyki:
-- Nie przechowuj sekretów w kodzie. Użyj GitHub Secrets / environment variables / secret manager (AWS/GCP/HashiCorp Vault).
+- Nie przechowuj sekretów w kodzie. Użyj GitHub Secrets / environment variables.
 - Ogranicz widoczność sekretów w CI: tylko workflow-y potrzebujące agentów powinny mieć dostęp.
 - Rekonfiguruj/rotuj klucze okresowo.
 
@@ -93,12 +98,23 @@ Przykładowe metryki:
 - CI: uruchamiaj testy przy każdym PR; dodaj krok lintowania i bezpieczeństwa (bandit for Python).
 
 ---
-
 ## Uruchamianie lokalne i w produkcji
-Przykłady (dostosuj do rzeczywistej struktury kodu):
-- Uruchomienie pojedynczego agenta lokalnie:
-  - export SUPABASE_URL=...
-  - export SUPABASE_KEY=...
+Przykłady uruchomienia (z katalogu głównego):
+
+1. **Pełna synchronizacja zawodnika (Statystyki + Logi meczowe):**
+   ```powershell
+   python sync_player_full.py "Robert Lewandowski"
+   ```
+
+2. **Synchronizacja tylko logów meczowych (szybka):**
+   ```powershell
+   python sync_match_logs.py
+   ```
+
+3. **Uruchomienie backendu z aktywnym Schedulerem:**
+   ```powershell
+   python -m uvicorn app.backend.main:app --reload
+   ```
   - python -m agents.data_ingest --config config/local.yaml
 - Docker (zalecane):
   - Stwórz Dockerfile dla agentów i docker-compose z service dla agenta + lokalny Supabase/Postgres.
