@@ -149,10 +149,39 @@ async def sync_competition_stats(scraper: FBrefPlaywrightScraper, db, player: Pl
     
     player_data = await scraper.get_player_by_id(player.api_id, player.name)
     
-    # Update player team if found
-    if player_data and player_data.get('team'):
-        player.team = player_data['team']
-        logger.info(f"  👕 Updated team: {player.team}")
+    # Update player info if found
+    if player_data:
+        if player_data.get('team'):
+            player.team = player_data['team']
+            logger.info(f"  👕 Updated team: {player.team}")
+        
+        # Update player league based on stats
+        if player_data.get('competition_stats'):
+            # Sort stats by season (descending)
+            sorted_stats = sorted(
+                player_data['competition_stats'], 
+                key=lambda x: x.get('season', ''), 
+                reverse=True
+            )
+            
+            current_league = None
+            current_squad = None
+            
+            for stat in sorted_stats:
+                if stat.get('competition_type') == 'LEAGUE':
+                    current_league = stat.get('competition_name')
+                    if stat.get('squad'):
+                        current_squad = stat.get('squad')
+                    break
+            
+            if current_league:
+                player.league = current_league
+                logger.info(f"  🏆 Updated league: {player.league}")
+                
+            if current_squad:
+                player.team = current_squad
+                logger.info(f"  👕 Updated team from stats: {player.team}")
+        
         db.add(player)
         db.commit()
 

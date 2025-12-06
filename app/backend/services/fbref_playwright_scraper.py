@@ -927,6 +927,17 @@ class FBrefPlaywrightScraper:
             if competition_type:
                 stat['competition_type'] = competition_type
             
+            # Squad / Team
+            squad_cell = row.find('td', {'data-stat': 'team'})
+            if not squad_cell:
+                squad_cell = row.find('td', {'data-stat': 'squad'})
+            if squad_cell:
+                squad_text = squad_cell.get_text(strip=True)
+                squad_link = squad_cell.find('a')
+                if squad_link:
+                    squad_text = squad_link.get_text(strip=True)
+                stat['squad'] = squad_text
+
             # Games
             games_cell = row.find('td', {'data-stat': 'games'})
             if games_cell:

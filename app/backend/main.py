@@ -206,6 +206,51 @@ async def sync_single_player(scraper: FBrefPlaywrightScraper, db, player: Player
         if player_data.get('team'):
             player.team = player_data['team']
             logger.info(f"  👕 Updated team: {player.team}")
+            
+        # Update player league based on stats
+        if player_data.get('competition_stats'):
+            # Sort stats by season (descending) to prioritize recent ones
+            sorted_stats = sorted(
+                player_data['competition_stats'], 
+                key=lambda x: x.get('season', ''), 
+                reverse=True
+            )
+            
+            current_league = None
+            
+            # First pass: Look for LEAGUE in current_season
+            for stat in sorted_stats:
+                if stat.get('competition_type') == 'LEAGUE':
+                    stat_season = stat.get('season', '')
+                    # Check for exact match or partial match (e.g. 2025-2026 vs 2025-26)
+                    if stat_season == current_season or \
+                       (current_season and current_season.replace('-', '-') in stat_season) or \
+                       (current_season and current_season.split('-')[0] in stat_season):
+                        current_league = stat.get('competition_name')
+                        break
+            
+            # Second pass: If not found, take the most recent LEAGUE
+            if not current_league:
+                for stat in sorted_stats:
+                    if stat.get('competition_type') == 'LEAGUE':
+                        current_league = stat.get('competition_name')
+                        break
+            
+            # Also try to find the squad from the most recent league stats
+            current_squad = None
+            for stat in sorted_stats:
+                if stat.get('competition_type') == 'LEAGUE':
+                    if stat.get('squad'):
+                        current_squad = stat.get('squad')
+                        break
+            
+            if current_league:
+                player.league = current_league
+                logger.info(f"  🏆 Updated league: {player.league}")
+                
+            if current_squad:
+                player.team = current_squad
+                logger.info(f"  👕 Updated team from stats: {player.team}")
         
         # Save FBref ID if found (use api_id field)
         if player_data.get('player_id'):
