@@ -10,21 +10,7 @@ from .models.player_match import PlayerMatch
 from .services.fbref_playwright_scraper import FBrefPlaywrightScraper
 import logging
 import os
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from .database import engine, Base, SessionLocal
-from .routers import players, comparison, matchlogs
-from .models import player
-from .models.player import Player
-from .models.competition_stats import CompetitionStats, CompetitionType
-from .models.goalkeeper_stats import GoalkeeperStats
-from .models.player_match import PlayerMatch
-from .services.fbref_playwright_scraper import FBrefPlaywrightScraper
-import logging
-import os
 import asyncio
-import resend
-from .config import settings 
 from datetime import datetime, date
 from sqlalchemy import extract
 from typing import Optional, List
@@ -35,12 +21,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 logger = logging.getLogger(__name__)
-
-
-if settings.resend_api_key:
-    resend.api_key = settings.resend_api_key
-else:
-    logger.warning("⚠️ Brak klucza RESEND_API_KEY - powiadomienia e-mail nie będą działać.")
 
 # Tworzenie tabel w bazie na starcie
 Base.metadata.create_all(bind=engine)
@@ -315,101 +295,290 @@ async def sync_single_player(scraper: FBrefPlaywrightScraper, db, player: Player
 
 def send_matchlogs_notification_email(synced: int, failed: int, total: int, total_matches: int, duration_minutes: float, failed_players: List[str]):
     """
-    Wysyła raport e-mail przez API Resend po zakończeniu synchronizacji matchlogów.
+    Send email notification after scheduled matchlogs sync completes.
+    
+    Args:
+        synced: Number of successfully synced players
+        failed: Number of failed players
+        total: Total number of players
+        total_matches: Total number of matches synced
+        duration_minutes: How long the sync took in minutes
+        failed_players: List of player names that failed to sync
     """
-    if not settings.resend_api_key or not settings.email_to:
-        logger.warning("⚠️ Pominięto wysyłkę e-maila (Matchlogs): Brak konfiguracji Resend/Email.")
-        return
-
     try:
+        # Get email configuration from environment variables
+        smtp_host = os.getenv("SMTP_HOST")
+        smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        smtp_user = os.getenv("SMTP_USER")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        email_from = os.getenv("EMAIL_FROM", smtp_user)
+        email_to = os.getenv("EMAIL_TO")
+        
+        # Check if email is configured
+        if not all([smtp_host, smtp_user, smtp_password, email_to]):
+            logger.warning("⚠️ Email not configured - skipping notification")
+            return
+        
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"📋 Matchlogs Sync Complete: {total_matches} Matches from {synced}/{total} Players"
+        msg['From'] = email_from
+        msg['To'] = email_to
+        
+        # Create email body
         success_rate = (synced / total * 100) if total > 0 else 0
         status_emoji = "✅" if failed == 0 else "⚠️" if success_rate >= 80 else "❌"
         
-        failed_list_html = ""
-        if failed_players:
-            failed_list_html = f"<h3>❌ Problemy z graczami ({len(failed_players)}):</h3><ul>"
-            for p in failed_players:
-                failed_list_html += f"<li>{p}</li>"
-            failed_list_html += "</ul>"
+        text_content = f"""
+Polish Football Data Hub International - Matchlogs Sync Report
+{'='*60}
 
-        html_content = f"""
-        <h2>{status_emoji} Raport Synchronizacji Matchlogów</h2>
-        <p><strong>Data:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        <p><strong>Czas trwania:</strong> {duration_minutes:.1f} min</p>
-        <hr>
-        <h3>Statystyki:</h3>
-        <ul>
-            <li><strong>Wszyscy gracze:</strong> {total}</li>
-            <li><strong>Zsynchronizowano:</strong> {synced} ({success_rate:.1f}%)</li>
-            <li><strong>Błędy:</strong> {failed}</li>
-            <li><strong>Pobrane mecze:</strong> {total_matches}</li>
-        </ul>
-        {failed_list_html}
-        <hr>
-        <p><small>Wysłano z Polish Football Data Hub (Render + Resend)</small></p>
-        """
+{status_emoji} MATCHLOGS SYNC COMPLETED
 
-        resend.Emails.send({
-            "from": settings.email_from, 
-            "to": settings.email_to,
-            "subject": f"{status_emoji} Sync Report: {total_matches} Matches ({synced}/{total} Players)",
-            "html": html_content
-        })
+Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Duration: {duration_minutes:.1f} minutes
+
+Results:
+- Total players: {total}
+- Successfully synced: {synced} ({success_rate:.1f}%)
+- Failed: {failed}
+- Total matches synced: {total_matches}
+
+"""
         
-        logger.info(f"✅ E-mail (Matchlogs) wysłany pomyślnie na: {settings.email_to}")
-
+        if failed_players:
+            text_content += f"Failed players:\n"
+            for player_name in failed_players:
+                text_content += f"  - {player_name}\n"
+        
+        text_content += f"\n{'='*60}\n"
+        
+        # HTML version
+        html_content = f"""
+<html>
+<head>
+<style>
+    body {{ font-family: Arial, sans-serif; }}
+    .header {{ background-color: #2196F3; color: white; padding: 20px; text-align: center; }}
+    .content {{ padding: 20px; }}
+    .stats {{ background-color: #f4f4f4; padding: 15px; margin: 20px 0; border-radius: 5px; }}
+    .success {{ color: #4CAF50; font-weight: bold; }}
+    .warning {{ color: #ff9800; font-weight: bold; }}
+    .error {{ color: #f44336; font-weight: bold; }}
+    .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+    ul {{ list-style-type: none; padding: 0; }}
+    li {{ padding: 5px 0; }}
+</style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 Polish Football Data Hub International</h1>
+        <h2>Matchlogs Sync Report</h2>
+    </div>
+    
+    <div class="content">
+        <p><strong>Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <p><strong>Duration:</strong> {duration_minutes:.1f} minutes</p>
+        
+        <div class="stats">
+            <h3>📊 Results</h3>
+            <ul>
+                <li><strong>Total players:</strong> {total}</li>
+                <li class="{'success' if synced == total else 'warning'}">
+                    <strong>Successfully synced:</strong> {synced} ({success_rate:.1f}%)
+                </li>
+                <li class="{'success' if failed == 0 else 'error'}">
+                    <strong>Failed:</strong> {failed}
+                </li>
+                <li class="success">
+                    <strong>Total matches synced:</strong> {total_matches}
+                </li>
+            </ul>
+        </div>
+"""
+        
+        if failed_players:
+            html_content += """
+        <div class="stats">
+            <h3>❌ Failed Players</h3>
+            <ul>
+"""
+            for player_name in failed_players:
+                html_content += f"                <li>{player_name}</li>\n"
+            html_content += """
+            </ul>
+        </div>
+"""
+        
+        html_content += """
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from Polish Football Data Hub International Scheduler</p>
+    </div>
+</body>
+</html>
+"""
+        
+        # Attach both text and HTML versions
+        part1 = MIMEText(text_content, 'plain')
+        part2 = MIMEText(html_content, 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        # Send email
+        logger.info(f"📧 Sending matchlogs notification email to {email_to}...")
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+        
+        logger.info("✅ Matchlogs notification email sent successfully")
+        
     except Exception as e:
-        logger.error(f"❌ Błąd podczas wysyłania e-maila przez Resend: {e}")
+        logger.error(f"❌ Failed to send matchlogs notification email: {e}", exc_info=True)
 
 
 def send_sync_notification_email(synced: int, failed: int, total: int, duration_minutes: float, failed_players: List[str]):
     """
-    Wysyła raport o ogólnej synchronizacji graczy (Basic Stats) przez API Resend.
+    Send email notification after scheduled sync completes.
+    
+    Args:
+        synced: Number of successfully synced players
+        failed: Number of failed players
+        total: Total number of players
+        duration_minutes: How long the sync took in minutes
+        failed_players: List of player names that failed to sync
     """
-    if not settings.resend_api_key or not settings.email_to:
-        logger.warning("⚠️ Pominięto wysyłkę e-maila (Basic Sync): Brak konfiguracji Resend.")
-        return
-
     try:
+        # Get email configuration from environment variables
+        smtp_host = os.getenv("SMTP_HOST")
+        smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        smtp_user = os.getenv("SMTP_USER")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        email_from = os.getenv("EMAIL_FROM", smtp_user)
+        email_to = os.getenv("EMAIL_TO")
+        
+        # Check if email is configured
+        if not all([smtp_host, smtp_user, smtp_password, email_to]):
+            logger.warning("⚠️ Email not configured - skipping notification")
+            return
+        
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"🤖 Scheduler Sync Complete: {synced}/{total} Players Synced"
+        msg['From'] = email_from
+        msg['To'] = email_to
+        
+        # Create email body
         success_rate = (synced / total * 100) if total > 0 else 0
         status_emoji = "✅" if failed == 0 else "⚠️" if success_rate >= 80 else "❌"
         
-        failed_list_html = ""
+        text_content = f"""
+Polish Football Data Hub International - Scheduled Sync Report
+{'='*60}
+
+{status_emoji} SYNC COMPLETED
+
+Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Duration: {duration_minutes:.1f} minutes
+
+Results:
+- Total players: {total}
+- Successfully synced: {synced} ({success_rate:.1f}%)
+- Failed: {failed}
+
+"""
+        
         if failed_players:
-            failed_list_html = f"<h3>❌ Nieudane ({len(failed_players)}):</h3><ul>"
-            for p in failed_players:
-                failed_list_html += f"<li>{p}</li>"
-            failed_list_html += "</ul>"
-
+            text_content += f"Failed players:\n"
+            for player_name in failed_players:
+                text_content += f"  - {player_name}\n"
+        
+        text_content += f"\n{'='*60}\n"
+        
+        # HTML version
         html_content = f"""
-        <h2>{status_emoji} Raport Synchronizacji (Podstawowe Dane)</h2>
-        <p><strong>Data:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        <p><strong>Czas:</strong> {duration_minutes:.1f} min</p>
-        <hr>
-        <ul>
-            <li><strong>Gracze razem:</strong> {total}</li>
-            <li><strong>Sukces:</strong> {synced} ({success_rate:.1f}%)</li>
-            <li><strong>Błędy:</strong> {failed}</li>
-        </ul>
-        {failed_list_html}
-        <hr>
-        <p><small>Powiadomienie z Polish Football Data Hub</small></p>
-        """
-
-        resend.Emails.send({
-            "from": settings.email_from, 
-            "to": settings.email_to,
-            "subject": f"{status_emoji} Sync Update: {synced}/{total} Players Updated",
-            "html": html_content
-        })
+<html>
+<head>
+<style>
+    body {{ font-family: Arial, sans-serif; }}
+    .header {{ background-color: #4CAF50; color: white; padding: 20px; text-align: center; }}
+    .content {{ padding: 20px; }}
+    .stats {{ background-color: #f4f4f4; padding: 15px; margin: 20px 0; border-radius: 5px; }}
+    .success {{ color: #4CAF50; font-weight: bold; }}
+    .warning {{ color: #ff9800; font-weight: bold; }}
+    .error {{ color: #f44336; font-weight: bold; }}
+    .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+    ul {{ list-style-type: none; padding: 0; }}
+    li {{ padding: 5px 0; }}
+</style>
+</head>
+<body>
+    <div class="header">
+        <h1>{status_emoji} Polish Football Data Hub International</h1>
+        <h2>Scheduled Sync Report</h2>
+    </div>
+    
+    <div class="content">
+        <p><strong>Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        <p><strong>Duration:</strong> {duration_minutes:.1f} minutes</p>
         
-        logger.info(f"✅ E-mail (Basic Sync) wysłany pomyślnie na: {settings.email_to}")
-
+        <div class="stats">
+            <h3>📊 Results</h3>
+            <ul>
+                <li><strong>Total players:</strong> {total}</li>
+                <li class="{'success' if synced == total else 'warning'}">
+                    <strong>Successfully synced:</strong> {synced} ({success_rate:.1f}%)
+                </li>
+                <li class="{'success' if failed == 0 else 'error'}">
+                    <strong>Failed:</strong> {failed}
+                </li>
+            </ul>
+        </div>
+"""
+        
+        if failed_players:
+            html_content += """
+        <div class="stats">
+            <h3>❌ Failed Players</h3>
+            <ul>
+"""
+            for player_name in failed_players:
+                html_content += f"                <li>{player_name}</li>\n"
+            html_content += """
+            </ul>
+        </div>
+"""
+        
+        html_content += """
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message from Polish Football Data Hub International Scheduler</p>
+    </div>
+</body>
+</html>
+"""
+        
+        # Attach both text and HTML versions
+        part1 = MIMEText(text_content, 'plain')
+        part2 = MIMEText(html_content, 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        # Send email
+        logger.info(f"📧 Sending notification email to {email_to}...")
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+        
+        logger.info("✅ Notification email sent successfully")
+        
     except Exception as e:
-        logger.error(f"❌ Błąd wysyłki maila (Basic Sync): {e}")
+        logger.error(f"❌ Failed to send notification email: {e}", exc_info=True)
 
-
-        
 
 async def sync_player_matchlogs(scraper: FBrefPlaywrightScraper, db, player: Player, season: str = "2025-2026") -> int:
     """
@@ -995,8 +1164,4 @@ def health_check():
         "timestamp": datetime.now().isoformat(),
         "scheduler_running": scheduler.running if scheduler else False
     }
-
-
-
-
 

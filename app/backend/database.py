@@ -41,6 +41,7 @@ elif is_postgresql:
     engine = create_engine(
         database_url,
         pool_pre_ping=True,  # Test connection before using
+        pool_recycle=1800,  # Recycle connections every 30 minutes
         pool_size=10,        # Connection pool size
         max_overflow=20,     # Max connections above pool_size
         echo=False,          # Set to True for SQL debugging
