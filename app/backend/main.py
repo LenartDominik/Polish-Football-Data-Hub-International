@@ -1,38 +1,31 @@
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from .database import engine, Base, SessionLocal
-from .routers import players, comparison, matchlogs
-from .models import player
-from .models.player import Player
-from .models.competition_stats import CompetitionStats, CompetitionType
-from .models.goalkeeper_stats import GoalkeeperStats
-from .models.player_match import PlayerMatch
-from .services.fbref_playwright_scraper import FBrefPlaywrightScraper
-import logging
-import os
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from .database import engine, Base, SessionLocal
-from .routers import players, comparison, matchlogs
-from .models import player
-from .models.player import Player
-from .models.competition_stats import CompetitionStats, CompetitionType
-from .models.goalkeeper_stats import GoalkeeperStats
-from .models.player_match import PlayerMatch
-from .services.fbref_playwright_scraper import FBrefPlaywrightScraper
 import logging
 import os
 import asyncio
-import resend
-from .config import settings 
+from contextlib import asynccontextmanager
 from datetime import datetime, date
-from sqlalchemy import extract
 from typing import Optional, List
+
+# --- Biblioteki zewnętrzne ---
+from fastapi import FastAPI
+import resend
+from sqlalchemy import extract
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+
+# --- Twoje moduły konfiguracyjne i bazodanowe ---
+from .config import settings 
+from .database import engine, Base, SessionLocal
+
+# --- Routery i Serwisy ---
+from .routers import players, comparison, matchlogs
+from .services.fbref_playwright_scraper import FBrefPlaywrightScraper
+
+# --- Modele Bazy Danych ---
+from .models.player import Player
+from .models.competition_stats import CompetitionStats, CompetitionType
+from .models.goalkeeper_stats import GoalkeeperStats
+from .models.player_match import PlayerMatch
+
 
 logger = logging.getLogger(__name__)
 
@@ -317,49 +310,50 @@ def send_matchlogs_notification_email(synced: int, failed: int, total: int, tota
     """
     Wysyła raport e-mail przez API Resend po zakończeniu synchronizacji matchlogów.
     """
+    # Sprawdzenie konfiguracji
     if not settings.resend_api_key or not settings.email_to:
-        logger.warning("⚠️ Pominięto wysyłkę e-maila (Matchlogs): Brak konfiguracji Resend/Email.")
+        print("⚠️ Pominięto wysyłkę: Brak klucza API lub adresu docelowego.") 
         return
 
-    try:
-        success_rate = (synced / total * 100) if total > 0 else 0
-        status_emoji = "✅" if failed == 0 else "⚠️" if success_rate >= 80 else "❌"
-        
-        failed_list_html = ""
-        if failed_players:
-            failed_list_html = f"<h3>❌ Problemy z graczami ({len(failed_players)}):</h3><ul>"
-            for p in failed_players:
-                failed_list_html += f"<li>{p}</li>"
-            failed_list_html += "</ul>"
+    # Obliczenia do treści maila
+    success_rate = (synced / total * 100) if total > 0 else 0
+    status_emoji = "✅" if failed == 0 else "⚠️" if success_rate >= 80 else "❌"
+    
+    failed_list_html = ""
+    if failed_players:
+        failed_list_html = f"<h3>❌ Problemy z graczami ({len(failed_players)}):</h3><ul>"
+        for p in failed_players:
+            failed_list_html += f"<li>{p}</li>"
+        failed_list_html += "</ul>"
 
-        html_content = f"""
-        <h2>{status_emoji} Raport Synchronizacji Matchlogów</h2>
-        <p><strong>Data:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        <p><strong>Czas trwania:</strong> {duration_minutes:.1f} min</p>
-        <hr>
-        <h3>Statystyki:</h3>
-        <ul>
-            <li><strong>Wszyscy gracze:</strong> {total}</li>
-            <li><strong>Zsynchronizowano:</strong> {synced} ({success_rate:.1f}%)</li>
-            <li><strong>Błędy:</strong> {failed}</li>
-            <li><strong>Pobrane mecze:</strong> {total_matches}</li>
-        </ul>
-        {failed_list_html}
-        <hr>
-        <p><small>Wysłano z Polish Football Data Hub (Render + Resend)</small></p>
-        """
+    html_content = f"""
+    <h2>{status_emoji} Raport Synchronizacji Matchlogów</h2>
+    <p><strong>Data:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    <p><strong>Czas trwania:</strong> {duration_minutes:.1f} min</p>
+    <hr>
+    <h3>Statystyki:</h3>
+    <ul>
+        <li><strong>Wszyscy gracze:</strong> {total}</li>
+        <li><strong>Zsynchronizowano:</strong> {synced} ({success_rate:.1f}%)</li>
+        <li><strong>Błędy:</strong> {failed}</li>
+        <li><strong>Pobrane mecze:</strong> {total_matches}</li>
+    </ul>
+    {failed_list_html}
+    <hr>
+    <p><small>Wysłano z Polish Football Data Hub (Render + Resend)</small></p>
+    """
+    
+    print(f"📧 Próba wysyłki z: {settings.email_from} do: {settings.email_to}") # Logowanie dla pewności
 
-        resend.Emails.send({
-            "from": settings.email_from, 
-            "to": settings.email_to,
-            "subject": f"{status_emoji} Sync Report: {total_matches} Matches ({synced}/{total} Players)",
-            "html": html_content
-        })
-        
-        logger.info(f"✅ E-mail (Matchlogs) wysłany pomyślnie na: {settings.email_to}")
+    resend.Emails.send({
+        "from": settings.email_from, 
+        "to": settings.email_to,
+        "subject": f"{status_emoji} Sync Report: {total_matches} Matches ({synced}/{total} Players)",
+        "html": html_content
+    })
+    
+    logger.info(f"✅ E-mail (Matchlogs) wysłany pomyślnie na: {settings.email_to}")
 
-    except Exception as e:
-        logger.error(f"❌ Błąd podczas wysyłania e-maila przez Resend: {e}")
 
 
 def send_sync_notification_email(synced: int, failed: int, total: int, duration_minutes: float, failed_players: List[str]):
@@ -996,9 +990,24 @@ def health_check():
         "scheduler_running": scheduler.running if scheduler else False
     }
 
-
-
-
+@app.get("/test-email")
+async def test_email_sending():
+    """
+    Uruchamia wysyłkę próbnego maila przez Resend.
+    """
+    try:
+        # Wywołujemy Twoją funkcję z przykładowymi danymi
+        send_matchlogs_notification_email(
+            synced=5, 
+            failed=1, 
+            total=6, 
+            total_matches=12, 
+            duration_minutes=0.5, 
+            failed_players=["Testowy Gracz (Error)"]
+        )
+        return {"status": "success", "message": "Mail wysłany! Sprawdź skrzynkę odbiorczą."}
+    except Exception as e:
+        return {"status": "error", "message": f"Błąd: {str(e)}"}
 
 
 
