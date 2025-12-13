@@ -95,8 +95,16 @@ class FBrefPlaywrightScraper:
             all_comps_url = f"{self.BASE_URL}/en/players/{player_id}/all_comps/"
             
             page = await self._create_page()
-            await page.goto(all_comps_url, wait_until="domcontentloaded", timeout=30000)
-            await asyncio.sleep(1.5)  # Wait for any JS to load
+            
+            # ZMIANA: Timeout 60s
+            await page.goto(all_comps_url, wait_until="domcontentloaded", timeout=60000)
+            
+            # ZMIANA: Zamiast sleep(1.5), czekamy na tabelę ze statystykami (max 10s)
+            try:
+                await page.wait_for_selector("table.stats_table", timeout=10000)
+            except Exception:
+                # Jeśli tabela się nie pojawi, logujemy warning, ale próbujemy pobrać HTML
+                logger.warning(f"⚠️ Stats table not detected for {player_id} (might be empty)")
             
             content = await page.content()
             await page.close()
@@ -106,34 +114,11 @@ class FBrefPlaywrightScraper:
         except Exception as e:
             logger.error(f"Error fetching /all_comps/ page: {e}")
             return None
+
     
     async def get_player_by_id(self, player_id: str, player_name: str = "") -> Optional[Dict]:
-        # Helper inside class to fetch extra GK sections by page
-        async def _fetch_gk_section(path_suffix: str, table_id: str, comp_type: Optional[str]):
-            try:
-                await self._wait_for_rate_limit()
-                page = await self._create_page()
-                url = f"{self.BASE_URL}/en/players/{player_id}/{path_suffix}"
-                await page.goto(url, wait_until='domcontentloaded', timeout=30000)
-                await asyncio.sleep(1.5)
-                html = await page.content()
-                await page.context.close()
-                soup2 = BeautifulSoup(html, 'html.parser')
-                table = soup2.find('table', {'id': table_id})
-                if table:
-                    return self._parse_goalkeeper_table(table, comp_type)
-            except Exception as e:
-                logger.warning(f"[GK_FALLBACK] Failed fetching {path_suffix}: {e}")
-            return []
         """
         Get player data directly by FBref player ID
-        
-        Args:
-            player_id: FBref player ID (e.g., '8d78e732')
-            player_name: Player name for URL (optional)
-        
-        Returns:
-            Dictionary with player data including competition stats
         """
         await self._wait_for_rate_limit()
         
@@ -145,8 +130,15 @@ class FBrefPlaywrightScraper:
         page = await self._create_page()
         
         try:
-            await page.goto(player_url, wait_until="networkidle", timeout=30000)
+            # ZMIANA: networkidle -> domcontentloaded + timeout 60s (To naprawia błąd z Render)
+            await page.goto(player_url, wait_until="domcontentloaded", timeout=60000)
             
+            # ZMIANA: Czekamy na załadowanie nagłówka (H1) zamiast na całą sieć
+            try:
+                await page.wait_for_selector('h1', timeout=5000)
+            except Exception:
+                pass 
+
             # Check if we got the player page
             if '/players/' not in page.url:
                 logger.error(f"Not redirected to player page: {page.url}")
@@ -164,20 +156,16 @@ class FBrefPlaywrightScraper:
             return player_data
             
         except Exception as e:
-            logger.error(f"Error fetching player by ID {player_id}: {e}", exc_info=True)
+            # ZMIANA: Łapiemy błąd, logujemy go i zwracamy None, żeby pętla szła dalej!
+            logger.error(f"❌ Error fetching player by ID {player_id}: {e}")
             return None
         finally:
             await page.close()
+
     
     async def search_player(self, player_name: str) -> Optional[Dict]:
         """
         Search for a player by name
-        
-        Args:
-            player_name: Player name to search for
-        
-        Returns:
-            Dictionary with player data
         """
         await self._wait_for_rate_limit()
         
@@ -188,16 +176,25 @@ class FBrefPlaywrightScraper:
         page = await self._create_page()
         
         try:
-            await page.goto(search_url, wait_until="networkidle", timeout=30000)
+            # ZMIANA: networkidle -> domcontentloaded
+            await page.goto(search_url, wait_until="domcontentloaded", timeout=60000)
             
             # Check if redirected to player page directly
             if '/players/' in page.url:
                 logger.info("✅ Redirected directly to player page")
+                try:
+                    await page.wait_for_selector('h1', timeout=5000)
+                except: pass
+                
                 content = await page.content()
                 soup = BeautifulSoup(content, 'html.parser')
                 return await self._parse_player_page(soup, page.url)
             
             # Otherwise, find first player result
+            try:
+                await page.wait_for_selector('.search-item-name a', timeout=5000)
+            except: pass
+            
             first_result = await page.query_selector('.search-item-name a')
             if not first_result:
                 logger.warning(f"No player found for: {player_name}")
@@ -212,7 +209,13 @@ class FBrefPlaywrightScraper:
             await self._wait_for_rate_limit()
             
             # Go to player page
-            await page.goto(player_url, wait_until="networkidle", timeout=30000)
+            # ZMIANA: networkidle -> domcontentloaded (drugie miejsce)
+            await page.goto(player_url, wait_until="domcontentloaded", timeout=60000)
+            
+            try:
+                await page.wait_for_selector('h1', timeout=5000)
+            except: pass
+
             content = await page.content()
             soup = BeautifulSoup(content, 'html.parser')
             
@@ -223,6 +226,7 @@ class FBrefPlaywrightScraper:
             return None
         finally:
             await page.close()
+
     
     async def _parse_player_page(self, soup: BeautifulSoup, url: str) -> Dict:
         """Parse player page and extract data - now uses /all_comps/ page for complete data"""
@@ -1026,20 +1030,11 @@ class FBrefPlaywrightScraper:
     async def get_player_match_logs(self, player_id: str, player_name: str = "", season: str = "2025-2026") -> List[Dict]:
         """
         Get match-by-match logs for a player in a specific season
-        
-        Args:
-            player_id: FBref player ID
-            player_name: Player name for URL
-            season: Season in format YYYY-YYYY (e.g., "2025-2026")
-        
-        Returns:
-            List of match dictionaries with detailed stats
         """
         await self._wait_for_rate_limit()
         
         name_slug = player_name.replace(' ', '-') if player_name else 'player'
-        # FBref uses different format for season in URL
-        season_slug = season.replace('-', '-')  # 2025-2026 stays as is
+        season_slug = season.replace('-', '-') 
         match_logs_url = f"{self.BASE_URL}/en/players/{player_id}/matchlogs/{season_slug}/{name_slug}-Match-Logs"
         
         logger.info(f"📋 Fetching match logs: {match_logs_url}")
@@ -1047,36 +1042,33 @@ class FBrefPlaywrightScraper:
         page = await self._create_page()
         
         try:
-            await page.goto(match_logs_url, wait_until="networkidle", timeout=30000)
+            # ZMIANA: networkidle -> domcontentloaded
+            await page.goto(match_logs_url, wait_until="domcontentloaded", timeout=60000)
             
-            # Get page content
+            # Czekamy na tabelę logów (opcjonalnie)
+            try:
+                await page.wait_for_selector("table[id*='matchlog']", timeout=10000)
+            except: pass
+            
             content = await page.content()
-            
-            # Parse with BeautifulSoup
             soup = BeautifulSoup(content, 'html.parser')
             
-            # Find match logs table
+            # ... (Reszta logiki parsowania bez zmian - kopiujemy ją) ...
             match_logs = []
-            
-            # Try to find the matchlogs table - check multiple possible IDs
-            # Common IDs: matchlogs_all, matchlogs_for, matchlog_XXXX
             possible_table_ids = ['matchlogs_all', 'matchlogs_for', 'matchlog']
             
             table = None
             for table_id in possible_table_ids:
                 table = soup.find('table', {'id': lambda x: x and table_id in x.lower()})
                 if table:
-                    logger.info(f"✅ Found match logs table: {table.get('id')}")
                     break
             
-            # If still not found, try in comments
             if not table:
                 for comment in soup.find_all(string=lambda text: isinstance(text, str) and 'matchlog' in text.lower()):
                     if '<table' in str(comment):
                         comment_soup = BeautifulSoup(str(comment), 'html.parser')
                         table = comment_soup.find('table')
                         if table and table.get('id') and 'matchlog' in table.get('id').lower():
-                            logger.info(f"✅ Found match logs table in comment: {table.get('id')}")
                             break
             
             if table:
@@ -1090,6 +1082,7 @@ class FBrefPlaywrightScraper:
             return []
         finally:
             await page.close()
+
     
     def _parse_match_logs_table(self, table) -> List[Dict]:
         """Parse match logs table"""
