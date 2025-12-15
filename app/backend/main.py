@@ -6,7 +6,7 @@ from datetime import datetime, date
 from typing import Optional, List
 
 # --- Biblioteki zewnętrzne ---
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Query
 import resend
 from sqlalchemy import extract
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -53,7 +53,7 @@ def get_competition_type(competition_name: str) -> str:
     # This prevents international matches from being classified as European cups
     if any(keyword in comp_lower for keyword in [
         'national team', 'reprezentacja', 'international',
-        'friendlies', 'wcq', 'world cup', 'uefa euro', 'copa am?rica'
+        'friendlies', 'wcq', 'world cup', 'uefa euro', 'copa america'
     ]):
         return "NATIONAL_TEAM"
     
@@ -906,10 +906,66 @@ app = FastAPI(
     },
 )
 
-# Rejestracja routerów z prefixem /api
-app.include_router(players.router, prefix="/api")                                                                   
-app.include_router(comparison.router, prefix="/api")                                                                
-app.include_router(matchlogs.router, prefix="/api")
+# --- NOWE ENDPOINTY DLA CRON-JOB.ORG ---
+
+@app.post("/api/trigger-sync-stats", tags=["Scheduler"])
+async def trigger_sync_stats(
+    background_tasks: BackgroundTasks, 
+    token: str = Query(...)
+):
+    """
+    Ręczne wyzwalanie synchronizacji statystyk (dla zewnętrznego crona).
+    """
+    # Pobieramy hasło ze zmiennych środowiskowych
+    expected_token = os.getenv("CRON_SECRET")
+    
+    # Jeśli zmienna nie jest ustawiona w Renderze, blokujemy dostęp (bezpiecznik)
+    if not expected_token:
+        logger.error("❌ CRON_SECRET not set in environment variables!")
+        raise HTTPException(status_code=500, detail="Server misconfiguration")
+
+    if token != expected_token:
+        logger.warning("⚠️ Nieudana autoryzacja endpointu crona (Stats)")
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    logger.info("🚀 [API] Otrzymano poprawne żądanie synchronizacji STATYSTYK")
+    
+    # Uruchomienie zadania w tle
+    background_tasks.add_task(scheduled_sync_all_players)
+    
+    return {
+        "message": "✅ Synchronizacja statystyk rozpoczęta w tle",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/api/trigger-sync-matchlogs", tags=["Scheduler"])
+async def trigger_sync_matchlogs(
+    background_tasks: BackgroundTasks, 
+    token: str = Query(...)
+):
+    """
+    Ręczne wyzwalanie synchronizacji logów meczowych (dla zewnętrznego crona).
+    """
+    expected_token = os.getenv("CRON_SECRET")
+    
+    if not expected_token:
+        logger.error("❌ CRON_SECRET not set in environment variables!")
+        raise HTTPException(status_code=500, detail="Server misconfiguration")
+    
+    if token != expected_token:
+        logger.warning("⚠️ Nieudana autoryzacja endpointu crona (Matchlogs)")
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    logger.info("🚀 [API] Otrzymano poprawne żądanie synchronizacji MATCHLOGS")
+    
+    # Uruchomienie zadania w tle
+    background_tasks.add_task(scheduled_sync_matchlogs)
+    
+    return {
+        "message": "✅ Synchronizacja logów meczowych rozpoczęta w tle",
+        "timestamp": datetime.now().isoformat()
+    }
 
 @app.get("/", tags=["Root"])
 def root():
@@ -1009,6 +1065,10 @@ async def test_email_sending():
     except Exception as e:
         return {"status": "error", "message": f"Błąd: {str(e)}"}
 
+# Rejestracja routerów z prefixem /api
+app.include_router(players.router, prefix="/api")                                                     
+app.include_router(comparison.router, prefix="/api")                                                    
+app.include_router(matchlogs.router, prefix="/api")
 
 
 
