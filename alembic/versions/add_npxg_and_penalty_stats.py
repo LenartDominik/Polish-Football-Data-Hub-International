@@ -18,8 +18,14 @@ depends_on = None
 
 def upgrade():
     # Add new columns to competition_stats
-    op.add_column('competition_stats', sa.Column('npxg', sa.Float(), nullable=True, server_default='0.0'))
-    op.add_column('competition_stats', sa.Column('penalty_goals', sa.Integer(), nullable=True, server_default='0'))
+    op.add_column(
+        'competition_stats',
+        sa.Column('npxg', sa.Float(), nullable=False, server_default=sa.text('0.0'))
+    )
+    op.add_column(
+        'competition_stats',
+        sa.Column('penalty_goals', sa.Integer(), nullable=False, server_default=sa.text('0'))
+    )
 
 
 def downgrade():

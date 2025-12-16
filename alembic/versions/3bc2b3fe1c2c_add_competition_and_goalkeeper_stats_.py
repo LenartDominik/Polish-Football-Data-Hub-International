@@ -11,28 +11,6 @@ def upgrade() -> None:
     # W SQLite możemy dodać warunek sprawdzający, czy tabela istnieje
     conn = op.get_bind()
     inspector = sa.inspect(conn)
-    
-    if 'player_live_stats' not in inspector.get_table_names():
-        op.create_table(
-            'player_live_stats',
-            sa.Column('id', sa.INTEGER(), primary_key=True, nullable=False),
-            sa.Column('player_id', sa.INTEGER(), nullable=True),
-            sa.Column('match_id', sa.INTEGER(), nullable=True),
-            sa.Column('goals', sa.INTEGER(), nullable=True),
-            sa.Column('assists', sa.INTEGER(), nullable=True),
-            sa.Column('yellow_cards', sa.INTEGER(), nullable=True),
-            sa.Column('red_cards', sa.INTEGER(), nullable=True),
-            sa.Column('minutes_played', sa.INTEGER(), nullable=True),
-            sa.Column('is_live', sa.BOOLEAN(), nullable=True),
-            sa.Column('team', sa.VARCHAR(), nullable=True),
-            sa.Column('created_at', sa.DATETIME(), nullable=True),
-            sa.Column('last_updated', sa.DATETIME(), nullable=True),
-            sa.ForeignKeyConstraint(['player_id'], ['players.id']),
-            sa.ForeignKeyConstraint(['match_id'], ['live_matches.id']),
-        )
-        op.create_index('ix_player_live_stats_player_id', 'player_live_stats', ['player_id'])
-        op.create_index('ix_player_live_stats_match_id', 'player_live_stats', ['match_id'])
-        op.create_index('ix_player_live_stats_id', 'player_live_stats', ['id'])
 
     # Analogicznie sprawdź i utwórz inne tabele:
     if 'live_matches' not in inspector.get_table_names():
@@ -46,13 +24,37 @@ def upgrade() -> None:
             sa.Column('home_score', sa.INTEGER(), nullable=True),
             sa.Column('away_score', sa.INTEGER(), nullable=True),
             sa.Column('status', sa.VARCHAR(), nullable=True),
-            sa.Column('kickoff_time', sa.DATETIME(), nullable=True),
+            sa.Column('kickoff_time', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
             sa.Column('matchday', sa.INTEGER(), nullable=True),
             sa.Column('season', sa.VARCHAR(), nullable=True),
-            sa.Column('last_updated', sa.DATETIME(), nullable=True),
+            sa.Column('last_updated', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
         )
         op.create_index('ix_live_matches_match_id', 'live_matches', ['match_id'], unique=True)
         op.create_index('ix_live_matches_id', 'live_matches', ['id'])
+
+
+    if 'player_live_stats' not in inspector.get_table_names():
+        op.create_table(
+            'player_live_stats',
+            sa.Column('id', sa.INTEGER(), primary_key=True, nullable=False),
+            sa.Column('player_id', sa.INTEGER(), nullable=True),
+            sa.Column('match_id', sa.INTEGER(), nullable=True),
+            sa.Column('goals', sa.INTEGER(), nullable=True),
+            sa.Column('assists', sa.INTEGER(), nullable=True),
+            sa.Column('yellow_cards', sa.INTEGER(), nullable=True),
+            sa.Column('red_cards', sa.INTEGER(), nullable=True),
+            sa.Column('minutes_played', sa.INTEGER(), nullable=True),
+            sa.Column('is_live', sa.BOOLEAN(), nullable=True),
+            sa.Column('team', sa.VARCHAR(), nullable=True),
+            sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+            sa.Column('last_updated', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
+            sa.ForeignKeyConstraint(['player_id'], ['players.id']),
+            sa.ForeignKeyConstraint(['match_id'], ['live_matches.id']),
+        )
+        op.create_index('ix_player_live_stats_player_id', 'player_live_stats', ['player_id'])
+        op.create_index('ix_player_live_stats_match_id', 'player_live_stats', ['match_id'])
+        op.create_index('ix_player_live_stats_id', 'player_live_stats', ['id'])
+
 
     if 'player_matches' not in inspector.get_table_names():
         op.create_table(

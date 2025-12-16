@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'add_uq_player_match'
-down_revision = None  # Update this if you have other migrations
+down_revision = 'add_npxg_penalty'
 branch_labels = None
 depends_on = None
 
