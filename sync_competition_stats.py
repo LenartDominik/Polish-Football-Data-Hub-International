@@ -52,8 +52,13 @@ def get_competition_type(competition_name: str) -> str:
     return "LEAGUE"
 
 
-def sync_competition_stats_from_matches(db, player_id: int) -> int:
-    """Synchronize competition_stats from player_matches"""
+
+def sync_competition_stats_from_matches(player_id: int) -> int:
+    """Synchronize competition_stats from player_matches (Safe for Supabase Port 6543)"""
+    
+    # KROK 1: Otwieramy "prywatną" sesję dla tej funkcji
+    db = SessionLocal()
+    
     try:
         # Get all matches for player
         matches = db.query(PlayerMatch).filter(
@@ -141,13 +146,19 @@ def sync_competition_stats_from_matches(db, player_id: int) -> int:
             
             updated += 1
         
+        # Zapisz zmiany
         db.commit()
         return updated
     
     except Exception as e:
-        logger.error(f"Error: {e}")
+        logger.error(f"Error syncing competition stats for player {player_id}: {e}")
         db.rollback()
         return 0
+        
+    finally:
+        # KROK 2: ZAWSZE zamykamy połączenie (kluczowe!)
+        db.close()
+
 
 
 def main():

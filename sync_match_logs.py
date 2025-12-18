@@ -18,115 +18,148 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
-async def sync_player_matches(scraper: FBrefPlaywrightScraper, db, player: Player, season: str = "2025-2026") -> int:
+# Importy na górze (upewnij się, że są):
+# from .database import SessionLocal
+# from datetime import date, datetime
+# from .models import Player, PlayerMatch  (twoje modele)
+
+async def sync_player_matches(scraper: FBrefPlaywrightScraper, player_info: dict, season: str = "2025-2026") -> int:
     """
-    Sync match logs for a player
+    Sync match logs for a player.
+    Safe for Supabase Port 6543 (Disconnects DB during API calls).
     
     Args:
         scraper: FBref Playwright scraper instance
-        db: Database session
-        player: Player object
-        season: Season to sync (default: 2025-2026)
-    
-    Returns:
-        Number of matches synced
+        player_info: Dict with keys {'id': int, 'name': str, 'api_id': str/None, 'fbref_id': str/None}
+        season: Season to sync
     """
-    logger.info(f"🏆 Syncing match logs for {player['name']} ({season})")
-    # Get FBref ID
-    fbref_id = player.get('fbref_id') or player.get('api_id')
+    player_id = player_info.get('id')
+    player_name = player_info.get('name')
+    
+    logger.info(f"🏆 Syncing match logs for {player_name} ({season})")
+    
+    # --- FAZA 1: API (Bez otwartej bazy danych) ---
+    
+    # 1. Sprawdź ID FBref (najpierw z argumentów, potem szukaj w sieci)
+    fbref_id = player_info.get('fbref_id') or player_info.get('api_id')
+    
     if not fbref_id:
-        logger.warning(f"⚠️ No FBref ID for {player['name']}. Searching...")
-        # Try to find player first
-        player_data = await scraper.search_player(player['name'])
-        if player_data and player_data.get('player_id'):
-            fbref_id = player_data['player_id']
-            # Update in DB if possible
-            db_player = db.query(Player).filter(Player.id == player['id']).first()
-            if db_player:
-                db_player.api_id = fbref_id
-                db.commit()
-            logger.info(f"✅ Found FBref ID: {fbref_id}")
-        else:
-            logger.error(f"❌ Could not find player on FBref")
+        logger.warning(f"⚠️ No FBref ID for {player_name}. Searching online...")
+        # To może trwać długo, dlatego baza musi być zamknięta!
+        try:
+            player_data_found = await scraper.search_player(player_name)
+            if player_data_found and player_data_found.get('player_id'):
+                fbref_id = player_data_found['player_id']
+                logger.info(f"✅ Found FBref ID online: {fbref_id}")
+                
+                # Zapisz znalezione ID do bazy (krótka, osobna transakcja)
+                # Otwieramy bazę tylko na moment zapisu ID
+                db_temp = SessionLocal()
+                try:
+                    p = db_temp.query(Player).get(player_id)
+                    if p:
+                        p.api_id = fbref_id # lub fbref_id field
+                        db_temp.commit()
+                except Exception as e:
+                    logger.error(f"Failed to save FBref ID: {e}")
+                finally:
+                    db_temp.close()
+            else:
+                logger.error(f"❌ Could not find player on FBref")
+                return 0
+        except Exception as e:
+            logger.error(f"Scraper error during search: {e}")
             return 0
-    # Get match logs
-    match_logs = await scraper.get_player_match_logs(fbref_id, player['name'], season)
+            
+    # 2. Pobierz logi meczowe (To trwa najdłużej!)
+    try:
+        match_logs = await scraper.get_player_match_logs(fbref_id, player_name, season)
+    except Exception as e:
+        logger.error(f"Scraper error getting logs: {e}")
+        return 0
+        
     if not match_logs:
         logger.warning(f"⚠️ No match logs found for {season}")
         return 0
-    logger.info(f"📊 Found {len(match_logs)} matches")
+        
+    logger.info(f"📊 Found {len(match_logs)} matches from API. Saving to DB...")
     
-    # Parse season to get date range (e.g., 2025-2026 = July 1, 2025 to June 30, 2026)
-    from datetime import date
-    year_start = int(season.split('-')[0])
-    year_end = year_start + 1
-    season_start = date(year_start, 7, 1)
-    season_end = date(year_end, 6, 30)
+    # --- FAZA 2: BAZA DANYCH (Szybki zapis) ---
     
-    # Delete existing matches for this season only
-    db.query(PlayerMatch).filter(
-        PlayerMatch.player_id == player['id'],
-        PlayerMatch.match_date >= season_start,
-        PlayerMatch.match_date <= season_end
-    ).delete(synchronize_session='fetch')
-    # Save matches
-    saved_count = 0
-    for match_data in match_logs:
-        try:
-            # Parse date - scraper returns 'match_date' key
-            match_date_str = match_data.get('match_date')
-            if match_date_str:
-                try:
-                    # FBref format is usually "2024-11-03" or similar
-                    match_date = datetime.strptime(match_date_str, '%Y-%m-%d').date()
-                except:
-                    # Try alternative formats
+    db = SessionLocal() # Otwieramy sesję dopiero TERAZ
+    try:
+        # Parse season to get date range
+        year_start = int(season.split('-')[0])
+        year_end = year_start + 1
+        season_start = date(year_start, 7, 1)
+        season_end = date(year_end, 6, 30)
+        
+        # Delete existing matches for this season
+        db.query(PlayerMatch).filter(
+            PlayerMatch.player_id == player_id,
+            PlayerMatch.match_date >= season_start,
+            PlayerMatch.match_date <= season_end
+        ).delete(synchronize_session=False) # 'fetch' jest wolniejsze, False wystarczy przy nowej sesji
+        
+        saved_count = 0
+        for match_data in match_logs:
+            try:
+                # Logika parsowania daty (skopiowana z Twojego kodu)
+                match_date_str = match_data.get('match_date')
+                match_date = date.today() # fallback
+                
+                if match_date_str:
                     try:
-                        # Try "YYYY-MM-DD"
-                        parts = match_date_str.split('-')
-                        if len(parts) == 3:
-                            match_date = date(int(parts[0]), int(parts[1]), int(parts[2]))
-                        else:
-                            logger.warning(f"Could not parse date: {match_date_str}, using today")
-                            match_date = date.today()
+                        match_date = datetime.strptime(match_date_str, '%Y-%m-%d').date()
                     except:
-                        logger.warning(f"Could not parse date: {match_date_str}, using today")
-                        match_date = date.today()
-            else:
-                logger.warning(f"No date in match data, using today")
-                match_date = date.today()
-            # Create match record
-            match = PlayerMatch(
-                player_id=player['id'],
-                match_date=match_date,
-                competition=match_data.get('competition', ''),
-                round=match_data.get('round', ''),
-                venue=match_data.get('venue', ''),
-                opponent=match_data.get('opponent', ''),
-                result=match_data.get('result', ''),
-                minutes_played=match_data.get('minutes_played', 0) or 0,
-                goals=match_data.get('goals', 0) or 0,
-                assists=match_data.get('assists', 0) or 0,
-                shots=match_data.get('shots', 0) or 0,
-                shots_on_target=match_data.get('shots_on_target', 0) or 0,
-                xg=match_data.get('xg', 0.0) or 0.0,
-                xa=match_data.get('xa', 0.0) or 0.0,
-                passes_completed=match_data.get('passes_completed', 0) or 0,
-                passes_attempted=match_data.get('passes_attempted', 0) or 0,
-                pass_completion_pct=match_data.get('pass_completion_pct', 0.0) or 0.0,
-                key_passes=match_data.get('key_passes', 0) or 0,
-                tackles=match_data.get('tackles', 0) or 0,
-                interceptions=match_data.get('interceptions', 0) or 0,
-                blocks=match_data.get('blocks', 0) or 0,
-                touches=match_data.get('touches', 0) or 0,
-            )
-            db.add(match)
-            saved_count += 1
-        except Exception as e:
-            logger.error(f"❌ Error saving match: {e}")
-    db.commit()
-    logger.info(f"✅ Saved {saved_count} matches for {player['name']} ({season})")
-    return saved_count
+                         try:
+                            parts = match_date_str.split('-')
+                            if len(parts) == 3:
+                                match_date = date(int(parts[0]), int(parts[1]), int(parts[2]))
+                         except:
+                            pass # zostaje today
+
+                # Create match record
+                match = PlayerMatch(
+                    player_id=player_id,
+                    match_date=match_date,
+                    competition=match_data.get('competition', '')[:50], # Zabezpieczenie długości stringa
+                    round=match_data.get('round', '')[:50],
+                    venue=match_data.get('venue', '')[:50],
+                    opponent=match_data.get('opponent', '')[:50],
+                    result=match_data.get('result', '')[:20],
+                    minutes_played=match_data.get('minutes_played', 0) or 0,
+                    goals=match_data.get('goals', 0) or 0,
+                    assists=match_data.get('assists', 0) or 0,
+                    shots=match_data.get('shots', 0) or 0,
+                    shots_on_target=match_data.get('shots_on_target', 0) or 0,
+                    xg=float(match_data.get('xg', 0.0) or 0.0), # rzutowanie na float
+                    xa=float(match_data.get('xa', 0.0) or 0.0),
+                    passes_completed=match_data.get('passes_completed', 0) or 0,
+                    passes_attempted=match_data.get('passes_attempted', 0) or 0,
+                    pass_completion_pct=float(match_data.get('pass_completion_pct', 0.0) or 0.0),
+                    key_passes=match_data.get('key_passes', 0) or 0,
+                    tackles=match_data.get('tackles', 0) or 0,
+                    interceptions=match_data.get('interceptions', 0) or 0,
+                    blocks=match_data.get('blocks', 0) or 0,
+                    touches=match_data.get('touches', 0) or 0,
+                )
+                db.add(match)
+                saved_count += 1
+            except Exception as e:
+                logger.error(f"❌ Error parsing match row: {e}")
+        
+        db.commit()
+        logger.info(f"✅ Saved {saved_count} matches for {player_name}")
+        return saved_count
+        
+    except Exception as e:
+        logger.error(f"❌ DB Transaction Error for {player_name}: {e}")
+        db.rollback()
+        return 0
+    finally:
+        db.close() 
+
 
 async def main():
     if len(sys.argv) < 2:

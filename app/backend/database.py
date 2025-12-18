@@ -36,14 +36,20 @@ elif is_postgresql:
     if "6543" in database_url or ("supabase.com" in database_url and "pooler" in database_url):
         # Disable prepared statements for Supabase Transaction Pooling (psycopg2)
         # This is required because Transaction Pooler doesn't support PREPARE statements
-        connect_args = {"options": "-c statement_timeout=30000"}
+        connect_args = {
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5,
+        }
     
     engine = create_engine(
         database_url,
         pool_pre_ping=True,  # Test connection before using
-        pool_recycle=1800,  # Recycle connections every 30 minutes
-        pool_size=10,        # Connection pool size
-        max_overflow=20,     # Max connections above pool_size
+        pool_recycle=300,  # Recycle connections every 30 minutes
+        pool_size=5,        # Connection pool size
+        max_overflow=10,     # Allow up to 10 connections above pool_size
+        pool_timeout=30,     # Wait max 30s for a connection from the pool
         echo=False,          # Set to True for SQL debugging
         connect_args=connect_args,
         # Disable statement caching for Transaction Pooler compatibility
