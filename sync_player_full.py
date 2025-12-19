@@ -157,6 +157,9 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
         
         match_log_keys = set((season, competition) for (season, competition) in stats_dict.keys())
         
+        # Get all seasons that have match logs (we only update these seasons)
+        seasons_with_match_logs = set(season for (season, _) in match_log_keys)
+        
         # Find ALL national team records from FBref
         existing_national = db.query(CompetitionStats).filter(
             CompetitionStats.player_id == player_id,
@@ -183,8 +186,13 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
         
         # Update or create competition_stats from match logs
         # IMPORTANT: We update existing records to preserve xG/npxG from FBref while fixing games/minutes
+        # ONLY update seasons that have match logs (preserve older seasons from FBref)
         updated = 0
         for (season, competition), stats in stats_dict.items():
+            # Only process if this season has match logs
+            if season not in seasons_with_match_logs:
+                continue
+                
             record = db.query(CompetitionStats).filter(
                 CompetitionStats.player_id == player_id,
                 CompetitionStats.season == season,
@@ -634,8 +642,8 @@ async def main():
         
         seasons_to_sync = []
         if args.all_seasons:
-            # Hardcoded: Always sync these 3 seasons (current, previous, 2 years back)
-            seasons_to_sync = ['2025-2026', '2024-2025', '2023-2024']
+            # Hardcoded: Always sync these 5 seasons (current + 4 previous)
+            seasons_to_sync = ['2025-2026', '2024-2025', '2023-2024', '2022-2023', '2021-2022']
             logger.info(f"📅 Found {len(seasons_to_sync)} seasons to sync")
         elif args.seasons: seasons_to_sync = args.seasons
         else: seasons_to_sync = ["2025-2026"]
