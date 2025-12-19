@@ -2,8 +2,8 @@
 Poprawiona wersja sync_competition_stats.py
 Naprawia:
 - Grupowanie reprezentacji jako "National Team {season}"
-- Prawidłowe ustawianie competition_type jako NATIONAL_TEAM
-- Używa funkcji get_competition_type() z main.py
+- Prawid�owe ustawianie competition_type jako NATIONAL_TEAM
+- U�ywa funkcji get_competition_type() z main.py
 """
 import sys
 sys.path.append('.')
@@ -56,7 +56,7 @@ def get_competition_type(competition_name: str) -> str:
 def sync_competition_stats_from_matches(player_id: int) -> int:
     """Synchronize competition_stats from player_matches (Safe for Supabase Port 6543)"""
     
-    # KROK 1: Otwieramy "prywatną" sesję dla tej funkcji
+    # KROK 1: Otwieramy "prywatn�" sesj� dla tej funkcji
     db = SessionLocal()
     
     try:
@@ -88,11 +88,27 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
             else:
                 season = f"{year-1}-{year}"
             
+            # Calendar year leagues (non-seasonal competitions)
+            calendar_year_leagues = [
+                'Veikkausliiga',           # Finland
+                'Allsvenskan',             # Sweden  
+                'Eliteserien',             # Norway
+                'MLS',                     # USA
+                'J1 League', 'J2 League',  # Japan
+                'K League 1',              # South Korea
+                'Chinese Super League',    # China
+                'A-League'                 # Australia
+            ]
+            
             # International matches use CALENDAR YEAR (not season)
             international_comps = ['WCQ', 'World Cup', 'UEFA Nations League', 
                                    'UEFA Euro Qualifying', 'UEFA Euro', 
-                                   'Friendlies (M)', 'Copa América']
-            if match.competition in international_comps:
+                                   'Friendlies (M)', 'Copa Am�rica']
+            
+            # Override season for calendar year leagues
+            if match.competition in calendar_year_leagues:
+                season = str(year)
+            elif match.competition in international_comps:
                 # Use calendar year for all international matches
                 season = str(year)
             
@@ -178,7 +194,7 @@ def main():
             player = db.query(Player).filter(Player.name.ilike(f"%{player_name}%")).first()
             
             if not player:
-                logger.error(f"❌ Player not found: {player_name}")
+                logger.error(f"? Player not found: {player_name}")
                 sys.exit(1)
             
             players = [player]
@@ -193,14 +209,14 @@ def main():
             updated = sync_competition_stats_from_matches(player.id)
             if updated > 0:
                 total_updated += updated
-                logger.info(f"✅ {player.name}: {updated} records updated")
+                logger.info(f"? {player.name}: {updated} records updated")
         
         logger.info("=" * 60)
-        logger.info(f"✅ SUCCESS: {total_updated} total records updated")
+        logger.info(f"? SUCCESS: {total_updated} total records updated")
         logger.info("=" * 60)
     
     except Exception as e:
-        logger.error(f"❌ Error: {e}", exc_info=True)
+        logger.error(f"? Error: {e}", exc_info=True)
     finally:
         db.close()
 
