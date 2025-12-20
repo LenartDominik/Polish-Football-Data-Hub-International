@@ -922,64 +922,64 @@ app = FastAPI(
 
 # --- NOWE ENDPOINTY DLA CRON-JOB.ORG ---
 
-@app.post("/api/trigger-sync-stats", tags=["Scheduler"])
-async def trigger_sync_stats(
-    background_tasks: BackgroundTasks, 
-    token: str = Query(...)
-):
-    """
-    Ręczne wyzwalanie synchronizacji statystyk (dla zewnętrznego crona).
-    """
-    # Pobieramy hasło ze zmiennych środowiskowych
-    expected_token = os.getenv("CRON_SECRET")
+# @app.post("/api/trigger-sync-stats", tags=["Scheduler"])
+# async def trigger_sync_stats(
+#     background_tasks: BackgroundTasks, 
+#     token: str = Query(...)
+# ):
+#     """
+#     Ręczne wyzwalanie synchronizacji statystyk (dla zewnętrznego crona).
+#     """
+#     # Pobieramy hasło ze zmiennych środowiskowych
+#     expected_token = os.getenv("CRON_SECRET")
     
-    # Jeśli zmienna nie jest ustawiona w Renderze, blokujemy dostęp (bezpiecznik)
-    if not expected_token:
-        logger.error("❌ CRON_SECRET not set in environment variables!")
-        raise HTTPException(status_code=500, detail="Server misconfiguration")
+#     # Jeśli zmienna nie jest ustawiona w Renderze, blokujemy dostęp (bezpiecznik)
+#     if not expected_token:
+#         logger.error("❌ CRON_SECRET not set in environment variables!")
+#         raise HTTPException(status_code=500, detail="Server misconfiguration")
 
-    if token != expected_token:
-        logger.warning("⚠️ Nieudana autoryzacja endpointu crona (Stats)")
-        raise HTTPException(status_code=401, detail="Invalid token")
+#     if token != expected_token:
+#         logger.warning("⚠️ Nieudana autoryzacja endpointu crona (Stats)")
+#         raise HTTPException(status_code=401, detail="Invalid token")
 
-    logger.info("🚀 [API] Otrzymano poprawne żądanie synchronizacji STATYSTYK")
+#     logger.info("🚀 [API] Otrzymano poprawne żądanie synchronizacji STATYSTYK")
     
-    # Uruchomienie zadania w tle
-    background_tasks.add_task(scheduled_sync_all_players)
+#     # Uruchomienie zadania w tle
+#     background_tasks.add_task(scheduled_sync_all_players)
     
-    return {
-        "message": "✅ Synchronizacja statystyk rozpoczęta w tle",
-        "timestamp": datetime.now().isoformat()
-    }
+#     return {
+#         "message": "✅ Synchronizacja statystyk rozpoczęta w tle",
+#         "timestamp": datetime.now().isoformat()
+#     }
 
 
-@app.post("/api/trigger-sync-matchlogs", tags=["Scheduler"])
-async def trigger_sync_matchlogs(
-    background_tasks: BackgroundTasks, 
-    token: str = Query(...)
-):
-    """
-    Ręczne wyzwalanie synchronizacji logów meczowych (dla zewnętrznego crona).
-    """
-    expected_token = os.getenv("CRON_SECRET")
+# @app.post("/api/trigger-sync-matchlogs", tags=["Scheduler"])
+# async def trigger_sync_matchlogs(
+#     background_tasks: BackgroundTasks, 
+#     token: str = Query(...)
+# ):
+#     """
+#     Ręczne wyzwalanie synchronizacji logów meczowych (dla zewnętrznego crona).
+#     """
+#     expected_token = os.getenv("CRON_SECRET")
     
-    if not expected_token:
-        logger.error("❌ CRON_SECRET not set in environment variables!")
-        raise HTTPException(status_code=500, detail="Server misconfiguration")
+#     if not expected_token:
+#         logger.error("❌ CRON_SECRET not set in environment variables!")
+#         raise HTTPException(status_code=500, detail="Server misconfiguration")
     
-    if token != expected_token:
-        logger.warning("⚠️ Nieudana autoryzacja endpointu crona (Matchlogs)")
-        raise HTTPException(status_code=401, detail="Invalid token")
+#     if token != expected_token:
+#         logger.warning("⚠️ Nieudana autoryzacja endpointu crona (Matchlogs)")
+#         raise HTTPException(status_code=401, detail="Invalid token")
 
-    logger.info("🚀 [API] Otrzymano poprawne żądanie synchronizacji MATCHLOGS")
+#     logger.info("🚀 [API] Otrzymano poprawne żądanie synchronizacji MATCHLOGS")
     
-    # Uruchomienie zadania w tle
-    background_tasks.add_task(scheduled_sync_matchlogs)
+#     # Uruchomienie zadania w tle
+#     background_tasks.add_task(scheduled_sync_matchlogs)
     
-    return {
-        "message": "✅ Synchronizacja logów meczowych rozpoczęta w tle",
-        "timestamp": datetime.now().isoformat()
-    }
+#     return {
+#         "message": "✅ Synchronizacja logów meczowych rozpoczęta w tle",
+#         "timestamp": datetime.now().isoformat()
+#     }
 
 @app.get("/", tags=["Root"])
 def root():
