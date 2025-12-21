@@ -112,7 +112,26 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
     
     IMPORTANT: This function REPLACES competition_stats with data from match logs.
     It deletes old stats that don't have corresponding match logs to avoid stale data.
+    Also: It canonicalizes competition names to prevent duplicate league rows (e.g., sponsor variants).
     """
+    def _norm_key(name: str) -> str:
+        if not name:
+            return ''
+        import re
+        s = name.lower()
+        # remove sponsor/common noise tokens
+        noise = [
+            'pko', 'bp', 'keuken', 'kampioen', 't-mobile', 'barclays', 'carabao', 'efl', 'betclic', 'tipsport',
+            'fortuna', 'puchar', 'cup', 'liga', 'league'  # keep base words handled later
+        ]
+        # keep base words but remove sponsor prefixes
+        for token in ['pko bp', 'keuken kampioen', 't-mobile', 'barclays']:
+            s = s.replace(token, ' ')
+        # strip punctuation and extra spaces
+        s = re.sub(r'[^a-z\s]', ' ', s)
+        s = re.sub(r'\s+', ' ', s).strip()
+        return s
+
     db = SessionLocal()
     try:
         # IMPORTANT: Only get matches where player actually played (minutes > 0)
@@ -151,73 +170,67 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
             stats_dict[key]['games_starts'] += 1 if (match.minutes_played or 0) > 45 else 0
         
         # CLEANUP: Delete stale national team entries from FBref that don't match actual match logs
-        # Example: FBref shows "WCQ 2026" but match logs show WCQ matches in 2025 (aggregated as "National Team 2025")
-        # Strategy: Delete ALL national team records that are NOT in our match log aggregation
-        # This handles cases like "WCQ 2026" where the year in the name doesn't match actual match dates
-        
         match_log_keys = set((season, competition) for (season, competition) in stats_dict.keys())
-        
-        # Get all seasons that have match logs (we only update these seasons)
         seasons_with_match_logs = set(season for (season, _) in match_log_keys)
-        
-        # Find ALL national team records from FBref
         existing_national = db.query(CompetitionStats).filter(
             CompetitionStats.player_id == player_id,
             CompetitionStats.competition_type == 'NATIONAL_TEAM'
         ).all()
-        
         deleted_count = 0
         for record in existing_national:
             key = (record.season, record.competition_name)
-            
-            # If this exact record is NOT in our match log aggregation, it's stale - delete it
-            # This catches:
-            # - "WCQ 2026" (7 games) when match logs show WCQ in 2025 → "National Team 2025"
-            # - "Friendlies (M) 2025" (0 games) when aggregated into "National Team 2025"
-            # - Any other stale FBref entries
             if key not in match_log_keys:
                 db.delete(record)
                 deleted_count += 1
                 logger.info(f"🗑️ Deleted stale national team record: {record.competition_name} ({record.season}) - not in match logs")
-        
         if deleted_count > 0:
             db.commit()
             logger.info(f"✅ Cleaned up {deleted_count} stale national team records from FBref")
         
-        # Update or create competition_stats from match logs
-        # IMPORTANT: We update existing records to preserve xG/npxG from FBref while fixing games/minutes
-        # ONLY update seasons that have match logs (preserve older seasons from FBref)
+        # Build season-level canonical name maps from existing competition_stats to merge variants
+        existing_by_season = {}
+        for season in seasons_with_match_logs:
+            rows = db.query(CompetitionStats).filter(
+                CompetitionStats.player_id == player_id,
+                CompetitionStats.season == season
+            ).all()
+            canon_map = {}
+            for r in rows:
+                canon_map[_norm_key(r.competition_name)] = r.competition_name
+            existing_by_season[season] = canon_map
+        
+        # Update or create competition_stats from match logs with canonicalized names
         updated = 0
         for (season, competition), stats in stats_dict.items():
-            # Only process if this season has match logs
             if season not in seasons_with_match_logs:
                 continue
-                
+            # find canonical existing name if any matches by normalized key
+            canon_map = existing_by_season.get(season, {})
+            norm = _norm_key(competition)
+            canonical_name = canon_map.get(norm, competition)
+
+            # If canonical differs and there exists another record under canonical name, target that record
             record = db.query(CompetitionStats).filter(
                 CompetitionStats.player_id == player_id,
                 CompetitionStats.season == season,
-                CompetitionStats.competition_name == competition
+                CompetitionStats.competition_name == canonical_name
             ).first()
             
-            # Ujednolicone competition_type
-            comp_type = normalize_competition_type(None, competition_name=competition)
-
+            comp_type = normalize_competition_type(None, competition_name=canonical_name)
             if record:
-                # Update existing record - overwrite games/minutes but keep xG/npxG from FBref if available
                 record.games = stats['games']
                 record.goals = stats['goals']
                 record.assists = stats['assists']
                 record.minutes = stats['minutes']
                 record.games_starts = stats['games_starts']
-                # Only update xG/xa if match logs have data (otherwise keep FBref values)
                 if stats['xg'] > 0:
                     record.xg = stats['xg']
                 if stats['xa'] > 0:
                     record.xa = stats['xa']
+                record.competition_type = comp_type
             else:
-                # Create new record from match logs
                 record = CompetitionStats(
-                    player_id=player_id, season=season, competition_name=competition, competition_type=comp_type,
+                    player_id=player_id, season=season, competition_name=canonical_name, competition_type=comp_type,
                     games=stats['games'], goals=stats['goals'], assists=stats['assists'], minutes=stats['minutes'],
                     xg=stats['xg'], xa=stats['xa'], games_starts=stats['games_starts']
                 )
@@ -225,7 +238,69 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
             updated += 1
         
         db.commit()
-        logger.info(f"✅ Updated {updated} competition_stats from match logs")
+        logger.info(f"✅ Updated {updated} competition_stats from match logs (canonical names)")
+
+        # Cleanup: remove LEAGUE records using single-year season labels (e.g., '2025')
+        # when a proper season range exists for the same competition in the same cycle (e.g., '2025-2026').
+        # This addresses leagues that FBref labels as '2025' but our app uses '2025-26'.
+        removed_single_year = 0
+        for season in seasons_with_match_logs:
+            # only consider YYYY-YYYY+1 forms
+            if '-' not in season:
+                continue
+            try:
+                y1 = season.split('-')[0]
+            except Exception:
+                continue
+            # Build set of normalized league names present under the proper season
+            target_rows = db.query(CompetitionStats).filter(
+                CompetitionStats.player_id == player_id,
+                CompetitionStats.season == season,
+                CompetitionStats.competition_type == 'LEAGUE'
+            ).all()
+            season_norms = {_norm_key(r.competition_name) for r in target_rows}
+            if not season_norms:
+                continue
+            # Find single-year league records for the same cycle and same normalized name
+            wrong_rows = db.query(CompetitionStats).filter(
+                CompetitionStats.player_id == player_id,
+                CompetitionStats.season == y1,
+                CompetitionStats.competition_type == 'LEAGUE'
+            ).all()
+            for r in wrong_rows:
+                if _norm_key(r.competition_name) in season_norms:
+                    db.delete(r)
+                    removed_single_year += 1
+        if removed_single_year:
+            db.commit()
+            logger.info(f"🧹 Removed {removed_single_year} single-year LEAGUE rows where season-range exists (e.g., 2025 -> 2025-2026)")
+
+        # Consolidate duplicate LEAGUE rows caused by naming variants within the same season
+        total_deleted_dupes = 0
+        for season in seasons_with_match_logs:
+            rows = db.query(CompetitionStats).filter(
+                CompetitionStats.player_id == player_id,
+                CompetitionStats.season == season,
+                CompetitionStats.competition_type == 'LEAGUE'
+            ).all()
+            groups = {}
+            for r in rows:
+                k = _norm_key(r.competition_name)
+                groups.setdefault(k, []).append(r)
+            for k, items in groups.items():
+                if len(items) <= 1:
+                    continue
+                # Keep the one with max minutes (most representative), delete others
+                items.sort(key=lambda r: (r.minutes or 0, r.games or 0), reverse=True)
+                keep = items[0]
+                to_delete = items[1:]
+                for d in to_delete:
+                    db.delete(d)
+                    total_deleted_dupes += 1
+        if total_deleted_dupes:
+            db.commit()
+            logger.info(f"🧹 Removed {total_deleted_dupes} duplicate LEAGUE rows after canonicalization")
+
         return updated
     except Exception as e:
         logger.error(f"Error syncing competition_stats from matches: {e}")
@@ -660,6 +735,8 @@ async def main():
         sync_competition_stats_from_matches(player_info['id'])
         logger.info("🔧 Fixing missing minutes...")
         fix_missing_minutes_from_matchlogs(player_info['id'])
+        logger.info("🛠️ Aligning goalkeeper league stats with match logs (games/minutes/starts)...")
+        fix_goalkeeper_stats_from_matchlogs(player_info['id'])
         
         logger.info("\n" + "=" * 80)
         logger.info("STEP 4: Update Team Based on Actual Match Data")
@@ -671,6 +748,86 @@ async def main():
         logger.info(f"   Competition Stats: {comp_count}")
         logger.info(f"   Match Logs: {total_matches}")
         logger.info("=" * 80)
+
+
+def _is_international_competition(name: str) -> bool:
+    if not name:
+        return False
+    comp_lower = name.lower()
+    keywords = [
+        'wcq', 'world cup', 'uefa nations league', 'uefa euro', 'euro qualifying', 'friendlies', 'copa am', 'international'
+    ]
+    return any(k in comp_lower for k in keywords)
+
+
+def fix_goalkeeper_stats_from_matchlogs(player_id: int):
+    """Align goalkeeper league stats (games, minutes, starts) with actual match logs.
+    We DO NOT modify GK-specific metrics (saves, GA, save%) because match logs don't have them.
+    Strategy:
+    - For each GoalkeeperStats row, compute totals from PlayerMatch within season range where minutes > 0
+    - Update games, minutes, games_starts if computed values are > 0 (leave zeros as-is to avoid false updates)
+    - For National Team, aggregate by calendar year using international competitions only
+    """
+    db = SessionLocal()
+    try:
+        gk_rows = db.query(GoalkeeperStats).filter(GoalkeeperStats.player_id == player_id).all()
+        if not gk_rows:
+            return
+        # Preload all matches for perf
+        all_matches = db.query(PlayerMatch).filter(
+            PlayerMatch.player_id == player_id,
+            PlayerMatch.minutes_played > 0
+        ).all()
+        for row in gk_rows:
+            season_str = str(row.season)
+            try:
+                season_start, season_end = get_season_date_range(season_str)
+            except Exception:
+                continue
+            comp_name = (row.competition_name or '').strip()
+            comp_type = (row.competition_type or '').upper()
+            relevant = []
+            if comp_type == 'NATIONAL_TEAM' or comp_name.lower().startswith('national team'):
+                # Calendar-year aggregation for international matches
+                try:
+                    year = int(season_str.split('-')[0]) if '-' in season_str else int(season_str)
+                except Exception:
+                    year = None
+                if year:
+                    for m in all_matches:
+                        if m.match_date.year == year and _is_international_competition(m.competition):
+                            relevant.append(m)
+            else:
+                target = comp_name.lower()
+                for m in all_matches:
+                    if season_start <= m.match_date <= season_end:
+                        comp = (m.competition or '').lower()
+                        if comp == target or target in comp:
+                            relevant.append(m)
+            if not relevant:
+                continue
+            calc_games = len(relevant)
+            calc_minutes = sum(m.minutes_played or 0 for m in relevant)
+            calc_starts = sum(1 for m in relevant if (m.minutes_played or 0) > 45)
+            changed = False
+            if calc_games and row.games != calc_games:
+                row.games = calc_games
+                changed = True
+            if calc_minutes and row.minutes != calc_minutes:
+                row.minutes = calc_minutes
+                changed = True
+            if calc_starts and (row.games_starts or 0) != calc_starts:
+                row.games_starts = calc_starts
+                changed = True
+            if changed:
+                db.add(row)
+        db.commit()
+    except Exception as e:
+        logger.error(f"Error aligning GK stats from match logs: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
