@@ -199,33 +199,46 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
                 canon_map[_norm_key(r.competition_name)] = r.competition_name
             existing_by_season[season] = canon_map
         
-        # Update or create competition_stats from match logs with canonicalized names
+        # Update or create competition_stats (and GoalkeeperStats if GK) from match logs
+        player_db = db.get(Player, player_id)
+        is_gk_player = player_db and str(player_db.position).strip().upper() in ["GK", "GOALKEEPER", "BRAMKARZ"]
+        
         updated = 0
         for (season, competition), stats in stats_dict.items():
             if season not in seasons_with_match_logs:
                 continue
-            # Try to find existing record strictly by name first
+            
+            # Recalculate competition type
+            effective_name = competition
+            comp_type = normalize_competition_type(None, competition_name=effective_name)
+            
+            if is_gk_player:
+                # Update GoalkeeperStats
+                gk_record = db.query(GoalkeeperStats).filter(
+                    GoalkeeperStats.player_id == player_id,
+                    GoalkeeperStats.season == season,
+                    GoalkeeperStats.competition_name == competition
+                ).first()
+                
+                if gk_record:
+                    gk_record.games = stats['games']
+                    gk_record.games_starts = stats['games_starts']
+                    gk_record.minutes = stats['minutes']
+                    gk_record.competition_type = comp_type
+                else:
+                    gk_record = GoalkeeperStats(
+                        player_id=player_id, season=season, competition_name=competition, 
+                        competition_type=comp_type, games=stats['games'], 
+                        games_starts=stats['games_starts'], minutes=stats['minutes']
+                    )
+                    db.add(gk_record)
+            
+            # ALWAYS update/create CompetitionStats (base for all players)
             record = db.query(CompetitionStats).filter(
                 CompetitionStats.player_id == player_id,
                 CompetitionStats.season == season,
-                CompetitionStats.competition_name == competition  # Use exact name first
+                CompetitionStats.competition_name == competition
             ).first()
-
-            # If not found, try canonical name from fuzzy match map
-            if not record:
-                canon_map = existing_by_season.get(season, {})
-                norm = _norm_key(competition)
-                canonical_name = canon_map.get(norm, competition)
-                
-                record = db.query(CompetitionStats).filter(
-                    CompetitionStats.player_id == player_id,
-                    CompetitionStats.season == season,
-                    CompetitionStats.competition_name == canonical_name
-                ).first()
-            
-            # Recalculate competition type
-            effective_name = record.competition_name if record else competition
-            comp_type = normalize_competition_type(None, competition_name=effective_name)
 
             if record:
                 # UPDATE existing
@@ -234,7 +247,6 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
                 record.assists = stats['assists']
                 record.minutes = stats['minutes']
                 record.games_starts = stats['games_starts']
-                # Only update xG/xA if we have data (don't overwrite with 0.0 if not needed, though here we have sum)
                 record.xg = stats['xg']
                 record.xa = stats['xa']
                 record.competition_type = comp_type
@@ -565,7 +577,7 @@ async def sync_competition_stats(scraper: FBrefPlaywrightScraper, player_info: d
                 league_stats = [st for st in player_data['competition_stats'] if normalize_competition_type(st.get('competition_type'), st.get('competition_name', '')) == 'LEAGUE']
                 
                 # Sort by: 1) season start year descending, 2) minutes played descending (better indicator than games)
-                league_stats.sort(key=lambda st: (season_start(st.get('season')), st.get('minutes', 0)), reverse=True)
+                league_stats.sort(key=lambda st: (season_start(st.get('season')), st.get('minutes') or 0), reverse=True)
                 
                 # Pick the first one with non-empty squad (most recent season, most minutes played)
                 for st in league_stats:
@@ -602,9 +614,13 @@ async def sync_competition_stats(scraper: FBrefPlaywrightScraper, player_info: d
         
         saved_count = 0
         for stat in deduplicated_stats:
-            # Skip stats with ANY None values (incomplete/corrupted data from FBref)
-            # Common for youth teams (PL2, reserves) or when FBref scraping fails
-            critical_fields = ['games', 'minutes', 'season', 'competition_name']
+            # Goalkeepers might have missing minutes in the overview table, but we want 
+            # their detailed stats (Saves, CS, GA). Step 3 will fill in minutes from match logs.
+            is_gk_stat = any(k in stat for k in ['goals_against', 'saves', 'clean_sheets', 'sota'])
+            critical_fields = ['games', 'season', 'competition_name']
+            if not is_gk_stat:
+                critical_fields.append('minutes')
+
             if any(stat.get(field) is None for field in critical_fields):
                 logger.warning(f"⚠️ Skipping incomplete stat: {stat.get('season')} {stat.get('competition_name')} {stat.get('competition_type')} (missing: {[f for f in critical_fields if stat.get(f) is None]})")
                 continue

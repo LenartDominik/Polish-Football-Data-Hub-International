@@ -31,7 +31,7 @@ class APIClient:
                 base_url = "http://localhost:8000"
         
         self.base_url = base_url.rstrip("/")
-        self.timeout = 30  # seconds
+        self.timeout = 60  # seconds (increased for Cloud cold starts)
     
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """Make HTTP request to API with error handling"""
@@ -62,14 +62,25 @@ class APIClient:
     
     # ===== PLAYERS ENDPOINTS =====
     
-    def get_all_players(self) -> pd.DataFrame:
-        """Get all players from API"""
-        data = self._make_request("GET", "/api/players/")
+    def get_all_players(self, name: Optional[str] = None, team: Optional[str] = None, league: Optional[str] = None, limit: Optional[int] = None, offset: Optional[int] = None) -> pd.DataFrame:
+        """Get players from API with optional filters and pagination"""
+        params = {}
+        if name:
+            params['name'] = name
+        if team:
+            params['team'] = team
+        if league:
+            params['league'] = league
+        if limit is not None:
+            params['limit'] = limit
+        if offset is not None:
+            params['offset'] = offset
+        
+        data = self._make_request("GET", "/api/players/", params=params if params else None)
         if data is None:
             return pd.DataFrame()
         
         df = pd.DataFrame(data)
-        # No need to rename - API already returns correct column names (team, league, etc.)
         return df
     
     def get_player(self, player_id: int) -> Optional[Dict]:
@@ -140,9 +151,11 @@ class APIClient:
         season: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        limit: Optional[int] = None
+        limit: Optional[int] = 100
     ) -> pd.DataFrame:
-        """Get matches for a player with optional filters"""
+        """Get matches for a player with optional filters; returns just the matches list.
+        The backend returns { 'matches': [...] }, so we extract that for a compact DataFrame.
+        """
         params = {}
         if competition:
             params['competition'] = competition
@@ -159,16 +172,17 @@ class APIClient:
         if data is None:
             return pd.DataFrame()
         
-        if isinstance(data, dict):
-            df = pd.DataFrame(data.get('matches', []))
-            # Add player_id column (needed for get_season_total_stats_by_date_range)
-            if not df.empty:
-                df['player_id'] = data.get('player_id', player_id)
-            # Normalize date column name
-            if 'date' in df.columns and 'match_date' not in df.columns:
-                df = df.rename(columns={'date': 'match_date'})
-            return df
-        return pd.DataFrame(data)
+        matches = data.get('matches', []) if isinstance(data, dict) else data
+        df = pd.DataFrame(matches)
+        
+        # Add player_id column (needed for get_season_total_stats_by_date_range)
+        if not df.empty:
+            df['player_id'] = data.get('player_id', player_id) if isinstance(data, dict) else player_id
+        
+        # Normalize date column name for downstream code expecting 'match_date'
+        if 'date' in df.columns and 'match_date' not in df.columns:
+            df = df.rename(columns={'date': 'match_date'})
+        return df
 
 
 # Global API client instance

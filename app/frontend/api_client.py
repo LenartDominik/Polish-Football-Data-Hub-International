@@ -31,7 +31,7 @@ class APIClient:
                 base_url = "http://localhost:8000"
         
         self.base_url = base_url.rstrip("/")
-        self.timeout = 30  # seconds
+        self.timeout = 60  # seconds (increased for Cloud cold starts)
     
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """Make HTTP request to API with error handling"""

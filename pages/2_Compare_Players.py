@@ -96,7 +96,7 @@ def format_value(value, stat_name):
     # For valid non-zero values, return as is
     return value
 
-# Format value for display in table
+# Format value for nice display in tables
 def format_display_value(value):
     """Format value for nice display in tables"""
     if value == 'N/A':
@@ -104,6 +104,26 @@ def format_display_value(value):
     if isinstance(value, float):
         return f"{value:.2f}"
     return str(value)
+
+def get_full_position(pos):
+    """Convert position abbreviations to full names."""
+    if not pos or pd.isna(pos):
+        return "Unknown"
+    
+    mapping = {
+        "GK": "Goalkeeper",
+        "DF": "Defender",
+        "MF": "Midfielder",
+        "FW": "Forward",
+        "BRAMKARZ": "Goalkeeper",
+        "OBROŃCA": "Defender",
+        "POMOCNIK": "Midfielder",
+        "NAPASTNIK": "Forward"
+    }
+    
+    parts = [p.strip().upper() for p in str(pos).split(',')]
+    full_parts = [mapping.get(p, p.capitalize()) for p in parts]
+    return ", ".join(full_parts)
 
 # Create radar chart (skip N/A values)
 def create_radar_chart(player1_data: Dict, player2_data: Dict, selected_stats: List[str]):
@@ -213,7 +233,7 @@ if not players:
     st.warning("No player data available.")
     st.stop()
 
-player_options = {f"{p['name']} ({p['team']} - {p['league']})": p['id'] for p in players}
+player_options = {f"{p['name']} ({get_full_position(p.get('position'))})": p['id'] for p in players}
 
 # Create a mapping of player_id to position
 player_positions = {p['id']: p.get('position', 'Unknown') for p in players}

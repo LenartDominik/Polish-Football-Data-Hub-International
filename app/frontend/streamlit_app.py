@@ -33,6 +33,26 @@ def safe_int(value):
         return 0
 # --------------------------------------------------------------
 
+def get_full_position(pos):
+    """Convert position abbreviations to full names."""
+    if not pos or pd.isna(pos):
+        return "Unknown"
+    
+    mapping = {
+        "GK": "Goalkeeper",
+        "DF": "Defender",
+        "MF": "Midfielder",
+        "FW": "Forward",
+        "BRAMKARZ": "Goalkeeper",
+        "OBROŃCA": "Defender",
+        "POMOCNIK": "Midfielder",
+        "NAPASTNIK": "Forward"
+    }
+    
+    parts = [p.strip().upper() for p in str(pos).split(',')]
+    full_parts = [mapping.get(p, p.capitalize()) for p in parts]
+    return ", ".join(full_parts)
+
 
 def get_season_filters(season_str='2025-2026'):
     """
@@ -161,7 +181,7 @@ def get_national_team_stats_by_year(player_id, year, matches_df):
     ]
     
     if year_matches.empty:
-        return None
+        return {}
     
     # Count starts (matches with 60+ minutes or specific logic - for now, count matches with 45+ minutes as starts)
     starts = len(year_matches[year_matches['minutes_played'] >= 45])
@@ -432,8 +452,13 @@ if df.empty:
     st.stop()
 
 # Filters
+# Filters
 teams = ['All'] + sorted(df['team'].dropna().unique().tolist())
 selected_team = st.sidebar.selectbox("Team", teams)
+
+players_list = ['All'] + [f"{row['name']} ({get_full_position(row.get('position'))})" for _, row in df.dropna(subset=['name']).iterrows()]
+players_list = sorted(list(set(players_list))) # Unique and sorted
+selected_player_str = st.sidebar.selectbox("Player (optional)", players_list)
 
 # Apply filters
 filtered_df = df.copy()
@@ -446,9 +471,19 @@ if search_name:
 if selected_team != 'All':
     filtered_df = filtered_df[filtered_df['team'].fillna('') == selected_team]
 
-# Jeśli nie ma wyszukiwania ANI filtru drużyny, nie pokazuj nic
-if not search_name and selected_team == 'All':
-    st.info("👆 Enter a player name in the search box OR select a team to view statistics")
+# Filtruj po wybraniu gracza z listy
+if selected_player_str != 'All':
+    # Extract name from string "Name (Position)"
+    if " (" in selected_player_str:
+        selected_player_name = selected_player_str.rsplit(" (", 1)[0]
+    else:
+        selected_player_name = selected_player_str
+        
+    filtered_df = filtered_df[filtered_df['name'] == selected_player_name]
+
+# Jeśli nie ma wyszukiwania ANI filtru drużyny ANI gracza, nie pokazuj nic
+if not search_name and selected_team == 'All' and selected_player_str == 'All':
+    st.info("👆 Enter a player name, select a team, or choose a player to view statistics")
     
     # Footer - FBref Attribution (pokazuj też na głównej stronie)
     st.divider()
@@ -557,8 +592,12 @@ if not filtered_df.empty:
                                 st.markdown(f"**{comp_row['competition_name']}**")
                                 m1, m2, m3 = st.columns(3)
                                 m1.metric("Games", safe_int(comp_row.get('games')))
-                                m2.metric("Goals", 0 if is_gk else safe_int(comp_row.get('goals')))
-                                m3.metric("Assists", safe_int(comp_row.get('assists')))
+                                if is_gk:
+                                    m2.metric("CS", 0)
+                                    m3.metric("GA", 0)
+                                else:
+                                    m2.metric("Goals", 0 if is_gk else safe_int(comp_row.get('goals')))
+                                    m3.metric("Assists", safe_int(comp_row.get('assists')))
 
                     if not found_league:
                         st.info("No league stats for 2025-2026")
@@ -587,7 +626,7 @@ if not filtered_df.empty:
                          league_stats = comp_stats_2526[league_mask]
                          if not league_stats.empty:
                              row_to_show = league_stats.iloc[0]
-                             is_gk_display = False
+                             is_gk_display = is_gk
                              details_found = True
                     
                     if details_found and row_to_show is not None:
@@ -680,8 +719,12 @@ if not filtered_df.empty:
                                 st.markdown(f"**{comp_row['competition_name']}**")
                                 m1, m2, m3 = st.columns(3)
                                 m1.metric("Games", safe_int(comp_row.get('games')))
-                                m2.metric("Goals", 0 if is_gk else safe_int(comp_row.get('goals')))
-                                m3.metric("Assists", safe_int(comp_row.get('assists')))
+                                if is_gk:
+                                    m2.metric("CS", 0)
+                                    m3.metric("GA", 0)
+                                else:
+                                    m2.metric("Goals", 0 if is_gk else safe_int(comp_row.get('goals')))
+                                    m3.metric("Assists", safe_int(comp_row.get('assists')))
 
                     if not found_euro:
                         st.markdown("<br><br><p style='text-align:center; color:gray'>No matches played</p>", unsafe_allow_html=True)
@@ -710,7 +753,7 @@ if not filtered_df.empty:
                             euro_stats = euro_stats[~euro_stats['competition_name'].apply(is_club_world_cup)]
                         if not euro_stats.empty:
                             euro_stats_to_show = euro_stats
-                            is_gk_display = False
+                            is_gk_display = is_gk
                             details_found = True
                     
                     if details_found and euro_stats_to_show is not None:
@@ -811,8 +854,12 @@ if not filtered_df.empty:
                                 st.markdown(f"**{comp_row['competition_name']}**")
                                 metric_col1, metric_col2, metric_col3 = st.columns(3)
                                 metric_col1.metric("Games", safe_int(comp_row.get('games')))
-                                metric_col2.metric("Goals", 0 if is_gk else safe_int(comp_row.get('goals')))
-                                metric_col3.metric("Assists", safe_int(comp_row.get('assists')))
+                                if is_gk:
+                                    metric_col2.metric("CS", 0)
+                                    metric_col3.metric("GA", 0)
+                                else:
+                                    metric_col2.metric("Goals", 0 if is_gk else safe_int(comp_row.get('goals')))
+                                    metric_col3.metric("Assists", safe_int(comp_row.get('assists')))
                     
                     # 3. Jeśli brak danych - wyświetl info (żeby kontener nie był pusty)
                     if not found_domestic:
@@ -837,7 +884,7 @@ if not filtered_df.empty:
                         domestic_stats = comp_stats_2526[comp_stats_2526['competition_type'] == 'DOMESTIC_CUP']
                         if not domestic_stats.empty:
                             row_to_show = domestic_stats.iloc[0]
-                            is_gk_display = False
+                            is_gk_display = is_gk
                             details_found = True
 
                     if details_found and row_to_show is not None:
@@ -963,7 +1010,7 @@ if not filtered_df.empty:
                         else:
                             # FALLBACK (tylko gdy brak danych w competition_stats): rok kalendarzowy z player_matches
                             pm_stats = get_national_team_stats_by_year(row['id'], 2025, matches_df)
-                            if pm_stats is not None and not pm_stats.empty:
+                            if pm_stats:
 
                                 national_data_found = True
                                 is_gk_stats_display = False
@@ -985,8 +1032,12 @@ if not filtered_df.empty:
                             # Metryki z pola
                             m1, m2, m3 = st.columns(3)
                             m1.metric("Caps", safe_int(total_games))
-                            m2.metric("Goals", 0 if is_gk else safe_int(total_goals))
-                            m3.metric("Assists", safe_int(total_assists))
+                            if is_gk:
+                                m2.metric("CS", 0)
+                                m3.metric("GA", 0)
+                            else:
+                                m2.metric("Goals", 0 if is_gk else safe_int(total_goals))
+                                m3.metric("Assists", safe_int(total_assists))
                     
                     # Fallback for goalkeepers (GK stats not available in player_matches with enough detail)
                     elif is_gk and not gk_stats.empty:
@@ -1025,7 +1076,7 @@ if not filtered_df.empty:
                             # UWAGA: match logi nie mają pełnych statystyk GK (CS/GA/Saves/SoTA), więc pokazujemy
                             # tylko Caps/Starts/Minutes, reszta = 0.
                             pm_stats = get_national_team_stats_by_year(row['id'], 2025, matches_df)
-                            if not pm_stats.empty:
+                            if pm_stats:
                                 national_data_found = True
                                 is_gk_stats_display = True
                                 total_games = pm_stats.get('games', 0)
