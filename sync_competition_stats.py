@@ -1,9 +1,9 @@
 ﻿"""
 Poprawiona wersja sync_competition_stats.py
 Naprawia:
+- Dublowanie sezonów dla MLS/Leagues Cup (wymusza rok kalendarzowy dla pucharów USA)
+- Normalizuje nazwy rozgrywek (Major League Soccer -> MLS)
 - Grupowanie reprezentacji jako "National Team {season}"
-- Prawid�owe ustawianie competition_type jako NATIONAL_TEAM
-- U�ywa funkcji get_competition_type() z main.py
 """
 import sys
 sys.path.append('.')
@@ -19,14 +19,10 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
-
-
-
 def sync_competition_stats_from_matches(player_id: int) -> int:
     """Synchronize competition_stats from player_matches (Safe for Supabase Port 6543)"""
     
-    # KROK 1: Otwieramy "prywatn�" sesj� dla tej funkcji
+    # KROK 1: Otwieramy "prywatną" sesję dla tej funkcji
     db = SessionLocal()
     
     try:
@@ -44,6 +40,23 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
             'xg': 0.0, 'xa': 0.0, 'games_starts': 0
         })
         
+        # --- KONFIGURACJA: Ligi grające systemem wiosna-jesień (rok kalendarzowy) ---
+        calendar_year_leagues = [
+            # Skandynawia
+            'Veikkausliiga', 'Allsvenskan', 'Eliteserien',
+            # USA / Kanada (Ważne: Puchary też muszą tu być!)
+            'MLS', 'Major League Soccer', 
+            'Leagues Cup', 'US Open Cup', 'Lamar Hunt U.S. Open Cup', 'Canadian Championship',
+            # Azja
+            'J1 League', 'J2 League', 'K League 1', 'Chinese Super League', 'A-League'
+        ]
+
+        international_comps = [
+            'WCQ', 'World Cup', 'UEFA Nations League', 
+            'UEFA Euro Qualifying', 'UEFA Euro', 
+            'Friendlies (M)', 'Copa América', 'Copa America'
+        ]
+
         for match in matches:
             # Skip matches with 0 minutes (bench/unused sub)
             if (match.minutes_played or 0) == 0:
@@ -52,43 +65,43 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
             year = match.match_date.year
             month = match.match_date.month
             
-            # Season logic: July-June
+            # --- NORMALIZACJA NAZWY ---
+            # Ujednolicamy nazwę zanim zaczniemy ustalać sezon
+            raw_comp = (match.competition or '').strip()
+            
+            if raw_comp == 'Major League Soccer':
+                comp_name = 'MLS'
+            elif 'U.S. Open Cup' in raw_comp:
+                comp_name = 'US Open Cup'
+            else:
+                comp_name = raw_comp
+
+            # --- USTALANIE SEZONU ---
+            # Domyślny format: Jesień-Wiosna (np. 2025-2026)
             if month >= 7:
                 season = f"{year}-{year+1}"
             else:
                 season = f"{year-1}-{year}"
             
-            # Calendar year leagues (non-seasonal competitions)
-            calendar_year_leagues = [
-                'Veikkausliiga',           # Finland
-                'Allsvenskan',             # Sweden  
-                'Eliteserien',             # Norway
-                'MLS',                     # USA
-                'J1 League', 'J2 League',  # Japan
-                'K League 1',              # South Korea
-                'Chinese Super League',    # China
-                'A-League'                 # Australia
-            ]
+            # Sprawdź czy to liga kalendarzowa (Wiosna-Jesień) lub rozgrywki międzynarodowe
+            # Wtedy sezonem jest po prostu ROK (np. 2025)
+            is_calendar_league = (
+                comp_name in calendar_year_leagues or 
+                any(c in comp_name for c in calendar_year_leagues) # Łapie warianty nazw
+            )
             
-            # International matches use CALENDAR YEAR (not season)
-            international_comps = ['WCQ', 'World Cup', 'UEFA Nations League', 
-                                   'UEFA Euro Qualifying', 'UEFA Euro', 
-                                   'Friendlies (M)', 'Copa Am�rica']
-            
-            # Override season for calendar year leagues
-            if match.competition in calendar_year_leagues:
+            if is_calendar_league:
                 season = str(year)
-            elif match.competition in international_comps:
-                # Use calendar year for all international matches
+            elif comp_name in international_comps or any(ic in comp_name for ic in international_comps):
+                # Mecze kadry zawsze po roku kalendarzowym
                 season = str(year)
+                # Nadpisz nazwę dla kadry
+                comp_name = f'National Team {season}'
             
-            # Group national team matches under "National Team {season}"
-            if match.competition in international_comps:
-                competition_name = f'National Team {season}'
-            else:
-                competition_name = match.competition
+            # Klucz do agregacji
+            key = (season, comp_name)
             
-            key = (season, competition_name)
+            # Agregacja
             stats_dict[key]['games'] += 1
             stats_dict[key]['goals'] += match.goals or 0
             stats_dict[key]['assists'] += match.assists or 0
@@ -148,8 +161,6 @@ def sync_competition_stats_from_matches(player_id: int) -> int:
     finally:
         db.close()
 
-
-
 def main():
     logger.info("=" * 60)
     logger.info("SYNCHRONIZACJA COMPETITION_STATS Z PLAYER_MATCHES")
@@ -190,7 +201,7 @@ def main():
     finally:
         db.close()
 
-
 if __name__ == "__main__":
     main()
+
 
