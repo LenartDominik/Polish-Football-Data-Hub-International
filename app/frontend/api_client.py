@@ -62,14 +62,25 @@ class APIClient:
     
     # ===== PLAYERS ENDPOINTS =====
     
-    def get_all_players(self) -> pd.DataFrame:
-        """Get all players from API"""
-        data = self._make_request("GET", "/api/players/")
+    def get_all_players(self, name: Optional[str] = None, team: Optional[str] = None, league: Optional[str] = None, limit: Optional[int] = None, offset: Optional[int] = None) -> pd.DataFrame:
+        """Get players from API with optional filters and pagination"""
+        params = {}
+        if name:
+            params['name'] = name
+        if team:
+            params['team'] = team
+        if league:
+            params['league'] = league
+        if limit is not None:
+            params['limit'] = limit
+        if offset is not None:
+            params['offset'] = offset
+        
+        data = self._make_request("GET", "/api/players/", params=params if params else None)
         if data is None:
             return pd.DataFrame()
         
         df = pd.DataFrame(data)
-        # No need to rename - API already returns correct column names (team, league, etc.)
         return df
     
     def get_player(self, player_id: int) -> Optional[Dict]:
@@ -79,15 +90,43 @@ class APIClient:
     # ===== STATS ENDPOINTS =====
     
     def get_all_competition_stats(self) -> pd.DataFrame:
-        """Get all competition stats"""
+        """Get all competition stats (use cautiously; heavy). Prefer filtered methods below."""
         data = self._make_request("GET", "/api/players/stats/competition")
+        if data is None:
+            return pd.DataFrame()
+        return pd.DataFrame(data)
+
+    def get_competition_stats(self, player_id: int, season: Optional[str] = None, competition_type: Optional[str] = None, limit: Optional[int] = 100) -> pd.DataFrame:
+        """Get competition stats filtered for a single player (and optional season/type)"""
+        params = {'player_id': player_id}
+        if season:
+            params['season'] = season
+        if competition_type:
+            params['competition_type'] = competition_type
+        if limit is not None:
+            params['limit'] = limit
+        data = self._make_request("GET", "/api/players/stats/competition", params=params)
         if data is None:
             return pd.DataFrame()
         return pd.DataFrame(data)
     
     def get_all_goalkeeper_stats(self) -> pd.DataFrame:
-        """Get all goalkeeper stats"""
+        """Get all goalkeeper stats (use cautiously; heavy). Prefer filtered methods below."""
         data = self._make_request("GET", "/api/players/stats/goalkeeper")
+        if data is None:
+            return pd.DataFrame()
+        return pd.DataFrame(data)
+
+    def get_goalkeeper_stats(self, player_id: int, season: Optional[str] = None, competition_type: Optional[str] = None, limit: Optional[int] = 100) -> pd.DataFrame:
+        """Get goalkeeper stats filtered for a single player (and optional season/type)"""
+        params = {'player_id': player_id}
+        if season:
+            params['season'] = season
+        if competition_type:
+            params['competition_type'] = competition_type
+        if limit is not None:
+            params['limit'] = limit
+        data = self._make_request("GET", "/api/players/stats/goalkeeper", params=params)
         if data is None:
             return pd.DataFrame()
         return pd.DataFrame(data)
@@ -126,9 +165,11 @@ class APIClient:
         season: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
-        limit: Optional[int] = None
+        limit: Optional[int] = 100
     ) -> pd.DataFrame:
-        """Get matches for a player with optional filters"""
+        """Get matches for a player with optional filters; returns just the matches list.
+        The backend returns { 'matches': [...] }, so we extract that for a compact DataFrame.
+        """
         params = {}
         if competition:
             params['competition'] = competition
@@ -145,7 +186,17 @@ class APIClient:
         if data is None:
             return pd.DataFrame()
         
-        return pd.DataFrame(data)
+        matches = data.get('matches', []) if isinstance(data, dict) else data
+        df = pd.DataFrame(matches)
+        
+        # Add player_id column (needed for get_season_total_stats_by_date_range)
+        if not df.empty:
+            df['player_id'] = data.get('player_id', player_id) if isinstance(data, dict) else player_id
+        
+        # Normalize date column name for downstream code expecting 'match_date'
+        if 'date' in df.columns and 'match_date' not in df.columns:
+            df = df.rename(columns={'date': 'match_date'})
+        return df
 
 
 # Global API client instance

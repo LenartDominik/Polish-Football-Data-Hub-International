@@ -78,16 +78,30 @@ class APIClient:
     
     # ===== STATS ENDPOINTS =====
     
-    def get_all_competition_stats(self) -> pd.DataFrame:
-        """Get all competition stats"""
-        data = self._make_request("GET", "/api/players/stats/competition")
+    def get_competition_stats(self, player_id: int) -> pd.DataFrame:
+        """Get competition stats for a specific player"""
+        data = self._make_request("GET", "/api/players/stats/competition", params={"player_id": player_id, "limit": 1000})
         if data is None:
             return pd.DataFrame()
         return pd.DataFrame(data)
-    
+
+    def get_goalkeeper_stats(self, player_id: int) -> pd.DataFrame:
+        """Get goalkeeper stats for a specific player"""
+        data = self._make_request("GET", "/api/players/stats/goalkeeper", params={"player_id": player_id, "limit": 1000})
+        if data is None:
+            return pd.DataFrame()
+        return pd.DataFrame(data)
+
+    def get_all_competition_stats(self) -> pd.DataFrame:
+        """Get all competition stats (DEPRECATED - use get_competition_stats(player_id))"""
+        data = self._make_request("GET", "/api/players/stats/competition", params={"limit": 1000})
+        if data is None:
+            return pd.DataFrame()
+        return pd.DataFrame(data)
+
     def get_all_goalkeeper_stats(self) -> pd.DataFrame:
-        """Get all goalkeeper stats"""
-        data = self._make_request("GET", "/api/players/stats/goalkeeper")
+        """Get all goalkeeper stats (DEPRECATED - use get_goalkeeper_stats(player_id))"""
+        data = self._make_request("GET", "/api/players/stats/goalkeeper", params={"limit": 1000})
         if data is None:
             return pd.DataFrame()
         return pd.DataFrame(data)
@@ -145,6 +159,15 @@ class APIClient:
         if data is None:
             return pd.DataFrame()
         
+        if isinstance(data, dict):
+            df = pd.DataFrame(data.get('matches', []))
+            # Add player_id column (needed for get_season_total_stats_by_date_range)
+            if not df.empty:
+                df['player_id'] = data.get('player_id', player_id)
+            # Normalize date column name
+            if 'date' in df.columns and 'match_date' not in df.columns:
+                df = df.rename(columns={'date': 'match_date'})
+            return df
         return pd.DataFrame(data)
 
 

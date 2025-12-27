@@ -356,7 +356,7 @@ if st.button("Compare Players"):
                 comparison['player1']['name']: player1_values,
                 comparison['player2']['name']: player2_values,
             })
-            st.dataframe(df_compare, use_container_width=True)
+            st.dataframe(df_compare, width='stretch')
 
 # ========================================
 # FOOTER - FBref Attribution

@@ -5,9 +5,15 @@ Usage:
 """
 import streamlit as st
 import pandas as pd
-# # import sqlite3  # REMOVED - using API now  # REMOVED - using API now
 from pathlib import Path
-from api_client import get_api_client
+import sys
+import os
+
+current = os.path.dirname(os.path.abspath(__file__))
+parent = os.path.dirname(os.path.dirname(current))
+sys.path.append(parent)
+
+from app.frontend.api_client import get_api_client
 
 
 # --- FUNKCJA POMOCNICZA DO NAPRAWY BŁĘDU NAN (CRITICAL FIX) ---
@@ -102,10 +108,17 @@ def is_club_world_cup(competition_name):
 
 def has_cwc_appearances(player_id, matches_df, season_start, season_end):
     '''Check if player has any CWC appearances with minutes > 0 in season'''
+    # 1. Sprawdź, czy DataFrame w ogóle istnieje
     if matches_df is None or matches_df.empty:
         return False
     
+    # 2. POPRAWKA: Sprawdź, czy nazwa 'player_id' znajduje się w liście kolumn
+    if 'player_id' not in matches_df.columns:
+        return False
+    
+    # Dalej bez zmian...
     pm = matches_df[matches_df['player_id'] == player_id].copy()
+    
     if pm.empty:
         return False
     
@@ -124,6 +137,7 @@ def has_cwc_appearances(player_id, matches_df, season_start, season_end):
     
     cwc_matches = pm[pm['competition'].apply(is_club_world_cup)]
     return len(cwc_matches) > 0
+
 
 # Helper function to get national team stats by calendar year from player_matches
 def get_national_team_stats_by_year(player_id, year, matches_df):
@@ -299,7 +313,6 @@ def get_season_total_stats_by_date_range(
         'shots_on_target': int(pm['shots_on_target'].sum()) if 'shots_on_target' in pm.columns else 0,
     }
 
-
 st.markdown("""
     <style>
         /* Ukrywa tylko link/element z label "streamlit app" w sidebarze */
@@ -308,6 +321,7 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
 # Page config
 st.set_page_config(
     page_title="Polish Football Data Hub International",
@@ -315,6 +329,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
 # Centered app title at the top
 st.markdown(
     """
@@ -322,57 +337,115 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 # Initialize API client
+
+# Cached helpers for lazy per-player fetches
+@st.cache_data(ttl=600, show_spinner=False)
+def get_player_competition_stats_cached(player_id: int, season: str | None = None, competition_type: str | None = None) -> pd.DataFrame:
+    """Fetch ALL competition stats for a player (all seasons, all competition types)"""
+    api_client = get_api_client()
+    df = api_client.get_competition_stats(player_id=player_id, season=season, competition_type=competition_type, limit=500)
+    return df if df is not None else pd.DataFrame()
+
+@st.cache_data(ttl=600, show_spinner=False)
+def get_player_goalkeeper_stats_cached(player_id: int, season: str | None = None, competition_type: str | None = None) -> pd.DataFrame:
+    """Fetch ALL goalkeeper stats for a player (all seasons, all competition types)"""
+    api_client = get_api_client()
+    df = api_client.get_goalkeeper_stats(player_id=player_id, season=season, competition_type=competition_type, limit=500)
+    return df if df is not None else pd.DataFrame()
+
+@st.cache_data(ttl=600, show_spinner=False)
+def get_player_matchlogs_cached(player_id: int, season: str = "2025-2026", limit: int = 200, _cache_version: int = 2) -> pd.DataFrame:
+    """Fetch matchlogs for a player. _cache_version forces cache invalidation when changed."""
+    api_client = get_api_client()
+    df = api_client.get_player_matches(player_id=player_id, season=season, limit=limit)
+    return df if df is not None else pd.DataFrame()
+
 @st.cache_data(ttl=60, show_spinner=False)
 def load_data():
-    """Load players data from API."""
+    """Load minimal data from API to reduce bandwidth usage.
+    Only fetch players list initially; fetch heavy stats lazily per player when needed.
+    """
     try:
         api_client = get_api_client()
         
-        # Pobierz dane graczy
+        # Fetch only players (small payload)
         players_df = api_client.get_all_players()
         
-        # Pobierz statystyki competition_stats
-        comp_stats_df = api_client.get_all_competition_stats()
+        # FIX: Create DataFrames with explicit columns to prevent KeyError in filtering functions
+        # This ensures that checks like "if 'player_id' in df" or "df['player_id']" work correctly even if empty.
         
-        # Pobierz goalkeeper_stats
-        gk_stats_df = api_client.get_all_goalkeeper_stats()
+        comp_stats_df = pd.DataFrame(columns=[
+            'id', 'player_id', 'season', 'competition_type', 'competition_name', 
+            'games', 'minutes', 'goals', 'assists', 'xg', 'xa'
+        ])
         
-        # Pobierz mecze graczy
-        matches_df = api_client.get_all_matches()
+        gk_stats_df = pd.DataFrame(columns=[
+            'id', 'player_id', 'season', 'competition_type', 'competition_name',
+            'clean_sheets', 'save_percentage', 'goals_against'
+        ])
         
-        # Note: player_season_stats table is deprecated, using competition_stats instead
-        stats_df = pd.DataFrame()  # Empty for backward compatibility
+        matches_df = pd.DataFrame(columns=[
+            'id', 'player_id', 'match_date', 'competition', 'opponent',
+            'minutes_played', 'goals', 'assists'
+        ])
+        
+        # Deprecated player_season_stats remains empty for backward compatibility
+        stats_df = pd.DataFrame()
         
         return players_df, stats_df, comp_stats_df, gk_stats_df, matches_df
+        
     except Exception as e:
         st.error(f"Error loading data from API: {e}")
         import traceback
         st.error(traceback.format_exc())
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        
+        # Return empty DataFrames with columns to prevent crashes downstream
+        empty_players = pd.DataFrame(columns=['id', 'name', 'team', 'league'])
+        empty_matches = pd.DataFrame(columns=['player_id'])
+        return empty_players, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), empty_matches
+
 # Sidebar - Search
 st.sidebar.header("🔎 Player Search")
 search_name = st.sidebar.text_input("Enter player name", placeholder="e.g. Lewandowski, Zieliński...")
+
+# If there is a search term, fetch filtered players from API (server-side filter), else use initial df
+api_client = get_api_client()
+if search_name and len(search_name.strip()) >= 1:
+    # Debounce-like behavior is limited in Streamlit; keep it simple
+    try:
+        df = api_client.get_all_players(name=search_name.strip(), limit=200)
+    except Exception:
+        pass
+
 # Optional filters
 st.sidebar.markdown("---")
 st.sidebar.subheader("🎛 Filters (Optional)")
+
 # Load data
 df, stats_df, comp_stats_df, gk_stats_df, matches_df = load_data()
+
 if df.empty:
     st.warning("No data available. Please sync data first.")
     st.info("Run: python sync_all_players.py")
     st.stop()
+
 # Filters
 teams = ['All'] + sorted(df['team'].dropna().unique().tolist())
 selected_team = st.sidebar.selectbox("Team", teams)
+
 # Apply filters
 filtered_df = df.copy()
+
 # Filtruj po nazwisku
 if search_name:
     filtered_df = filtered_df[filtered_df['name'].str.contains(search_name, case=False, na=False)]
+
 # Filtruj po drużynie
 if selected_team != 'All':
     filtered_df = filtered_df[filtered_df['team'].fillna('') == selected_team]
+
 # Jeśli nie ma wyszukiwania ANI filtru drużyny, nie pokazuj nic
 if not search_name and selected_team == 'All':
     st.info("👆 Enter a player name in the search box OR select a team to view statistics")
@@ -397,14 +470,30 @@ if not search_name and selected_team == 'All':
     """, unsafe_allow_html=True)
     
     st.stop()
+
 # Display filtered results
 if not filtered_df.empty:
     for idx, row in filtered_df.iterrows():
-        # Przywróć pobieranie competition_stats i goalkeeper_stats dla każdej karty zawodnika
-        comp_stats = comp_stats_df[comp_stats_df['player_id'] == row['id']].sort_values(['season', 'competition_type'], ascending=False) if not comp_stats_df.empty and 'player_id' in comp_stats_df.columns else pd.DataFrame()
-        gk_stats = gk_stats_df[gk_stats_df['player_id'] == row['id']].sort_values(['season', 'competition_type'], ascending=False) if not gk_stats_df.empty and 'player_id' in gk_stats_df.columns else pd.DataFrame()
-        # Przywróć pobieranie player_stats, bo jest używane w innych sekcjach
-        player_stats = stats_df[stats_df['player_id'] == row['id']].sort_values('season', ascending=False) if not stats_df.empty and 'player_id' in stats_df.columns else pd.DataFrame()
+        player_id = int(row['id'])
+        # Leniwe pobieranie: per gracz
+        position = str(row.get('position', '') or '').strip().upper()
+        is_gk = position in ("GK", "BRAMKARZ", "GOALKEEPER")
+        # Domyślny sezon i typ rozgrywek dla minimalnego transferu
+        # Fetch ALL stats for this player (all seasons, all competition types)
+        # This enables: 5 columns display + Season Statistics History with multiple seasons
+        if is_gk:
+            gk_stats = get_player_goalkeeper_stats_cached(player_id)  # No filters - get all
+            comp_stats = get_player_competition_stats_cached(player_id)  # Also fetch for fallback
+        else:
+            comp_stats = get_player_competition_stats_cached(player_id)  # No filters - get all
+            gk_stats = pd.DataFrame()
+        
+        # Matchlogs - fetch current season only (for Recent Matches display)
+        matches_df = get_player_matchlogs_cached(player_id, season='2025-2026', limit=100)
+        
+        # Player season stats (deprecated) – pozostaje puste
+        player_stats = pd.DataFrame()
+        
         # ...nowa sekcja 5 kolumn i advanced stats (tylko raz, nie powtarzaj)
         # Tytuł karty
         current_season = ['2025-2026', '2025/2026', 2025]
@@ -417,6 +506,7 @@ if not filtered_df.empty:
         else:
             goals_current = safe_int(season_current['goals'].iloc[0]) if not season_current.empty else 0
         card_title = f"⚽ {row['name']} - {row['team'] or 'Unknown Team'}"
+        
         with st.expander(card_title, expanded=(len(filtered_df) <= 3)):
             # Check if player has CWC appearances (minutes > 0)
             season_start = '2025-07-01'
@@ -430,9 +520,9 @@ if not filtered_df.empty:
                 col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 2])
                 col6 = None  # Placeholder
             
-            STATS_HEIGHT = 350 
+            STATS_HEIGHT = 350
 
-                                   # --- KOLUMNA 1: LEAGUE STATS ---
+            # --- KOLUMNA 1: LEAGUE STATS ---
             with col1:
                 # Górna część: Statystyki w sztywnym pudełku (wysokość = STATS_HEIGHT)
                 with st.container(height=STATS_HEIGHT, border=False):
@@ -474,7 +564,6 @@ if not filtered_df.empty:
                         st.info("No league stats for 2025-2026")
 
                 # Dolna część: Szczegóły (poza kontenerem, więc zawsze na dole)
-                # WAŻNE: To musi być wcięte wewnątrz `with col1`, ale równolegle do `with st.container`
                 with st.expander("📊 Details"):
                     details_found = False
                     row_to_show = None
@@ -557,7 +646,6 @@ if not filtered_df.empty:
                     else:
                         st.write("No details available.")
 
-
             # --- KOLUMNA 2: EUROPEAN CUPS ---
             with col2:
                 with st.container(height=STATS_HEIGHT, border=False):
@@ -596,7 +684,6 @@ if not filtered_df.empty:
                                 m3.metric("Assists", safe_int(comp_row.get('assists')))
 
                     if not found_euro:
-                        # Ważne: pusty write lub info, żeby kontener nie był pusty wizualnie
                         st.markdown("<br><br><p style='text-align:center; color:gray'>No matches played</p>", unsafe_allow_html=True)
 
                 with st.expander("📊 Details"):
@@ -691,7 +778,8 @@ if not filtered_df.empty:
                                 st.markdown("---")
                     else:
                         st.write("No matches played")
-                        # --- KOLUMNA 3: DOMESTIC CUPS ---
+
+            # --- KOLUMNA 3: DOMESTIC CUPS ---
             with col3:
                 # GÓRA: Statystyki w sztywnym pudełku (wysokość STATS_HEIGHT)
                 with st.container(height=STATS_HEIGHT, border=False):
@@ -806,9 +894,8 @@ if not filtered_df.empty:
                                 st.write(f"📈 **xGI / 90:** {xgi_per_90:.2f}")
                     else:
                         st.write("No details available.")
-
-            # KOLUMNA 4: NATIONAL TEAM (Combined - includes WCQ, Friendlies, etc.)
-                        # --- KOLUMNA 4: NATIONAL TEAM ---
+            
+            # --- KOLUMNA 4: NATIONAL TEAM ---
             with col4:
                 # GÓRA: Statystyki w sztywnym pudełku
                 with st.container(height=STATS_HEIGHT, border=False):
@@ -876,7 +963,8 @@ if not filtered_df.empty:
                         else:
                             # FALLBACK (tylko gdy brak danych w competition_stats): rok kalendarzowy z player_matches
                             pm_stats = get_national_team_stats_by_year(row['id'], 2025, matches_df)
-                            if pm_stats:
+                            if pm_stats is not None and not pm_stats.empty:
+
                                 national_data_found = True
                                 is_gk_stats_display = False
                                 total_games = pm_stats.get('games', 0)
@@ -937,7 +1025,7 @@ if not filtered_df.empty:
                             # UWAGA: match logi nie mają pełnych statystyk GK (CS/GA/Saves/SoTA), więc pokazujemy
                             # tylko Caps/Starts/Minutes, reszta = 0.
                             pm_stats = get_national_team_stats_by_year(row['id'], 2025, matches_df)
-                            if pm_stats:
+                            if not pm_stats.empty:
                                 national_data_found = True
                                 is_gk_stats_display = True
                                 total_games = pm_stats.get('games', 0)
@@ -985,14 +1073,12 @@ if not filtered_df.empty:
                             st.write(f"🅰️ **Assists:** {safe_int(total_assists)}")
                             if total_xg > 0:
                                 st.write(f"📊 **xG:** {total_xg:.2f}")
-                            # Note: npxg and penalty_goals need to be aggregated from the query
-                            # We'll need to update the aggregation logic above for full details
                             if total_xa > 0:
                                 st.write(f"📊 **xAG:** {total_xa:.2f}")
                     else:
                         st.write("No details available.")
-                        # --- KOLUMNA 5: SEASON TOTAL (2025-2026) ---
-                        # --- KOLUMNA 5: SEASON TOTAL (2025-2026) ---
+
+            # --- KOLUMNA 5: SEASON TOTAL (2025-2026) ---
             with (col6 if has_cwc and col6 is not None else col5):
                 # GÓRA: Statystyki w sztywnym pudełku
                 with st.container(height=STATS_HEIGHT, border=False):
@@ -1133,211 +1219,187 @@ if not filtered_df.empty:
                                 if total_pen_goals > 0:
                                     st.write(f"⚽ **Total Penalty Goals:** {safe_int(total_pen_goals)}")
 
-
             # === ADVANCED PROGRESSION STATS - FOR NON-GOALKEEPERS ===
             # FIX: Only show this section if player actually has data (don't show "not synced" message)
+                        # FIX: Only show this section if player actually has data (don't show "not synced" message)
             if str(row['position']).strip().upper() not in ["GK", "BRAMKARZ", "GOALKEEPER"]:
                 if not player_stats.empty:
-                    season_current = player_stats[player_stats['season'].isin(current_season)]
-                    if not season_current.empty:
-                        has_data = False
-                        # Check if we have any progression stats
-                        stat_columns = ['progressive_passes', 'progressive_carries']
-                        for col in stat_columns:
-                            if col in season_current.columns:
-                                val = season_current[col].iloc[0]
-                                if pd.notna(val) and val > 0:
-                                    has_data = True
-                                    break
+                    # Pobieramy wszystkie wiersze dla obecnego sezonu
+                    season_current_raw = player_stats[player_stats['season'].isin(current_season)].copy()
+                    
+                    if not season_current_raw.empty:
+                        # Definiujemy kolumny, które chcemy zsumować
+                        cols_to_sum = [
+                            'progressive_passes', 'progressive_carries', 'progressive_carrying_distance', 'progressive_passes_received',
+                            'shots_total', 'shots_on_target', 'penalty_kicks_made',
+                            'passes_completed', 'passes_attempted', 'key_passes', 'passes_into_penalty_area',
+                            'shot_creating_actions', 'goal_creating_actions',
+                            'tackles', 'tackles_won', 'interceptions', 'blocks',
+                            'touches', 'dribbles_completed', 'dribbles_attempted', 'carries', 'ball_recoveries',
+                            'aerials_won', 'aerials_lost', 'fouls_committed', 'fouls_drawn', 'offsides'
+                        ]
                         
-                        # Only show the section if we have data
-                        if has_data:
+                        # Konwertujemy na liczby i sumujemy (agregacja wierszy Liga + Puchary + Kadra)
+                        agg_stats = {}
+                        for col in cols_to_sum:
+                            if col in season_current_raw.columns:
+                                # Konwersja na numeric + suma
+                                val = pd.to_numeric(season_current_raw[col], errors='coerce').sum()
+                                agg_stats[col] = val
+                            else:
+                                agg_stats[col] = 0
+
+                        # Specjalne obliczenia dla procentów (średnia ważona byłaby idealna, ale tu uprościmy: obliczamy na podstawie sum)
+                        # Shots Accuracy
+                        if agg_stats['shots_total'] > 0:
+                            agg_stats['shots_on_target_pct'] = (agg_stats['shots_on_target'] / agg_stats['shots_total']) * 100
+                        else:
+                            agg_stats['shots_on_target_pct'] = 0.0
+
+                        # Pass Accuracy
+                        if agg_stats['passes_attempted'] > 0:
+                            agg_stats['pass_completion_pct'] = (agg_stats['passes_completed'] / agg_stats['passes_attempted']) * 100
+                        else:
+                            agg_stats['pass_completion_pct'] = 0.0
+
+
+                        # === WYŚWIETLANIE METRYK (Korzystamy z agg_stats zamiast iloc[0]) ===
+
+                        # --- Progressive Stats ---
+                        has_prog_data = any(agg_stats[k] > 0 for k in ['progressive_passes', 'progressive_carries', 'progressive_carrying_distance'])
+                        if has_prog_data:
                             st.write("---")
                             st.write("### 📊 Advanced Progression Stats")
-                            st.caption("*Statistics from league competition*")
+                            st.caption("*Aggregated statistics (League + Cups + National Team)*")
                             
-                            # Progressive stats only
                             col1, col2, col3, col4 = st.columns(4)
                             with col1:
-                                if 'progressive_passes' in season_current.columns:
-                                    prog_passes = season_current['progressive_passes'].iloc[0]
-                                    if pd.notna(prog_passes):
-                                        st.metric("Progressive Passes", int(prog_passes))
+                                if agg_stats['progressive_passes'] > 0:
+                                    st.metric("Progressive Passes", int(agg_stats['progressive_passes']))
                             with col2:
-                                if 'progressive_carries' in season_current.columns:
-                                    prog_carries = season_current['progressive_carries'].iloc[0]
-                                    if pd.notna(prog_carries):
-                                        st.metric("Progressive Carries", int(prog_carries))
+                                if agg_stats['progressive_carries'] > 0:
+                                    st.metric("Progressive Carries", int(agg_stats['progressive_carries']))
                             with col3:
-                                if 'progressive_carrying_distance' in season_current.columns:
-                                    prog_dist = season_current['progressive_carrying_distance'].iloc[0]
-                                    if pd.notna(prog_dist):
-                                        st.metric("Prog. Carry Distance", f"{int(prog_dist)}m")
+                                if agg_stats['progressive_carrying_distance'] > 0:
+                                    st.metric("Prog. Carry Distance", f"{int(agg_stats['progressive_carrying_distance'])}m")
                             with col4:
-                                if 'progressive_passes_received' in season_current.columns:
-                                    prog_recv = season_current['progressive_passes_received'].iloc[0]
-                                    if pd.notna(prog_recv):
-                                        st.metric("Prog. Passes Received", int(prog_recv))
-            # === SEKCJE ROZSZERZONYCH STATYSTYK Z FBREF ===
-            # STRZAŁY
-            if not player_stats.empty:
-                season_current = player_stats[player_stats['season'].isin(current_season)]
-                if not season_current.empty and 'shots_total' in season_current.columns:
-                    shots_total = season_current['shots_total'].iloc[0]
-                    if pd.notna(shots_total) and shots_total > 0:
-                        st.write("---")
-                        st.subheader("⚽ Shooting Stats")
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Total Shots", int(shots_total))
-                        with col2:
-                            shots_on_target = season_current['shots_on_target'].iloc[0]
-                            if pd.notna(shots_on_target):
-                                st.metric("Shots on Target", int(shots_on_target))
-                        with col3:
-                            accuracy = season_current['shots_on_target_pct'].iloc[0]
-                            if pd.notna(accuracy):
-                                st.metric("Accuracy", f"{accuracy:.1f}%")
-                        with col4:
-                            pens = season_current['penalty_kicks_made'].iloc[0]
-                            if pd.notna(pens):
-                                st.metric("Penalties", int(pens))
-            # PODANIA
-            if not player_stats.empty:
-                season_current = player_stats[player_stats['season'].isin(current_season)]
-                if not season_current.empty and 'passes_completed' in season_current.columns:
-                    passes = season_current['passes_completed'].iloc[0]
-                    if pd.notna(passes) and passes > 0:
-                        st.write("---")
-                        st.subheader("🎯 Passing Stats")
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            passes_att = season_current['passes_attempted'].iloc[0]
-                            if pd.notna(passes_att):
-                                st.metric("Passes", f"{int(passes)}/{int(passes_att)}")
-                        with col2:
-                            pass_pct = season_current['pass_completion_pct'].iloc[0]
-                            if pd.notna(pass_pct):
-                                st.metric("Pass Accuracy", f"{pass_pct:.1f}%")
-                        with col3:
-                            key_passes = season_current['key_passes'].iloc[0]
-                            if pd.notna(key_passes):
-                                st.metric("Key Passes", int(key_passes))
-                        with col4:
-                            passes_penalty = season_current['passes_into_penalty_area'].iloc[0]
-                            if pd.notna(passes_penalty):
-                                st.metric("Into Pen. Area", int(passes_penalty))
-            # TWORZENIE AKCJI
-            if not player_stats.empty:
-                season_current = player_stats[player_stats['season'].isin(current_season)]
-                if not season_current.empty and 'shot_creating_actions' in season_current.columns:
-                    sca = season_current['shot_creating_actions'].iloc[0]
-                    if pd.notna(sca) and sca > 0:
-                        st.write("---")
-                        st.subheader("🎨 Creating Actions")
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.metric("Shot Creating Actions", int(sca))
-                        with col2:
-                            gca = season_current['goal_creating_actions'].iloc[0]
-                            if pd.notna(gca):
-                                st.metric("Goal Creating Actions", int(gca))
-            # OBRONA
-            if not player_stats.empty:
-                season_current = player_stats[player_stats['season'].isin(current_season)]
-                if not season_current.empty and 'tackles' in season_current.columns:
-                    tackles = season_current['tackles'].iloc[0]
-                    if pd.notna(tackles) and tackles > 0:
-                        st.write("---")
-                        st.subheader("🛡️ Defensive Stats")
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Tackles", int(tackles))
-                        with col2:
-                            tackles_won = season_current['tackles_won'].iloc[0]
-                            if pd.notna(tackles_won):
-                                st.metric("Tackles Won", int(tackles_won))
-                        with col3:
-                            interceptions = season_current['interceptions'].iloc[0]
-                            if pd.notna(interceptions):
-                                st.metric("Interceptions", int(interceptions))
-                        with col4:
-                            blocks = season_current['blocks'].iloc[0]
-                            if pd.notna(blocks):
-                                st.metric("Blocks", int(blocks))
-            # POSIADANIE
-            if not player_stats.empty:
-                season_current = player_stats[player_stats['season'].isin(current_season)]
-                if not season_current.empty and 'touches' in season_current.columns:
-                    touches = season_current['touches'].iloc[0]
-                    if pd.notna(touches) and touches > 0:
-                        st.write("---")
-                        st.subheader("🏃 Possession Stats")
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Touches", int(touches))
-                        with col2:
-                            dribbles_comp = season_current['dribbles_completed'].iloc[0]
-                            dribbles_att = season_current['dribbles_attempted'].iloc[0]
-                            if pd.notna(dribbles_comp) and pd.notna(dribbles_att):
-                                st.metric("Dribbles", f"{int(dribbles_comp)}/{int(dribbles_att)}")
-                        with col3:
-                            carries = season_current['carries'].iloc[0]
-                            if pd.notna(carries):
-                                st.metric("Carries", int(carries))
-                        with col4:
-                            ball_rec = season_current['ball_recoveries'].iloc[0]
-                            if pd.notna(ball_rec):
-                                st.metric("Ball Recoveries", int(ball_rec))
-            # RÓŻNE
-            if not player_stats.empty:
-                season_current = player_stats[player_stats['season'].isin(current_season)]
-                if not season_current.empty and 'aerials_won' in season_current.columns:
-                    aerials = season_current['aerials_won'].iloc[0]
-                    if pd.notna(aerials) and aerials > 0:
-                        st.write("---")
-                        st.subheader("📊 Miscellaneous")
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            aerials_lost = season_current['aerials_lost'].iloc[0]
-                            if pd.notna(aerials_lost):
-                                st.metric("Aerials Won", f"{int(aerials)}/{int(aerials) + int(aerials_lost)}")
-                        with col2:
-                            fouls_com = season_current['fouls_committed'].iloc[0]
-                            if pd.notna(fouls_com):
-                                st.metric("Fouls Committed", int(fouls_com))
-                        with col3:
-                            fouls_drawn = season_current['fouls_drawn'].iloc[0]
-                            if pd.notna(fouls_drawn):
-                                st.metric("Fouls Drawn", int(fouls_drawn))
-                        with col4:
-                            offsides = season_current['offsides'].iloc[0]
-                            if pd.notna(offsides):
-                                st.metric("Offsides", int(offsides))
+                                if agg_stats['progressive_passes_received'] > 0:
+                                    st.metric("Prog. Passes Received", int(agg_stats['progressive_passes_received']))
+
+                        # --- Shooting Stats ---
+                        if agg_stats['shots_total'] > 0:
+                            st.write("---")
+                            st.subheader("⚽ Shooting Stats")
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                st.metric("Total Shots", int(agg_stats['shots_total']))
+                            with col2:
+                                st.metric("Shots on Target", int(agg_stats['shots_on_target']))
+                            with col3:
+                                st.metric("Accuracy", f"{agg_stats['shots_on_target_pct']:.1f}%")
+                            with col4:
+                                if agg_stats['penalty_kicks_made'] > 0:
+                                    st.metric("Penalties", int(agg_stats['penalty_kicks_made']))
+
+                        # --- Passing Stats ---
+                        if agg_stats['passes_completed'] > 0:
+                            st.write("---")
+                            st.subheader("🎯 Passing Stats")
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                st.metric("Passes", f"{int(agg_stats['passes_completed'])}/{int(agg_stats['passes_attempted'])}")
+                            with col2:
+                                st.metric("Pass Accuracy", f"{agg_stats['pass_completion_pct']:.1f}%")
+                            with col3:
+                                st.metric("Key Passes", int(agg_stats['key_passes']))
+                            with col4:
+                                st.metric("Into Pen. Area", int(agg_stats['passes_into_penalty_area']))
+
+                        # --- Creating Actions ---
+                        if agg_stats['shot_creating_actions'] > 0:
+                            st.write("---")
+                            st.subheader("🎨 Creating Actions")
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.metric("Shot Creating Actions", int(agg_stats['shot_creating_actions']))
+                            with col2:
+                                st.metric("Goal Creating Actions", int(agg_stats['goal_creating_actions']))
+
+                        # --- Defensive Stats ---
+                        if agg_stats['tackles'] > 0:
+                            st.write("---")
+                            st.subheader("🛡️ Defensive Stats")
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                st.metric("Tackles", int(agg_stats['tackles']))
+                            with col2:
+                                st.metric("Tackles Won", int(agg_stats['tackles_won']))
+                            with col3:
+                                st.metric("Interceptions", int(agg_stats['interceptions']))
+                            with col4:
+                                st.metric("Blocks", int(agg_stats['blocks']))
+
+                        # --- Possession Stats ---
+                        if agg_stats['touches'] > 0:
+                            st.write("---")
+                            st.subheader("🏃 Possession Stats")
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                st.metric("Touches", int(agg_stats['touches']))
+                            with col2:
+                                st.metric("Dribbles", f"{int(agg_stats['dribbles_completed'])}/{int(agg_stats['dribbles_attempted'])}")
+                            with col3:
+                                st.metric("Carries", int(agg_stats['carries']))
+                            with col4:
+                                st.metric("Ball Recoveries", int(agg_stats['ball_recoveries']))
+
+                        # --- Miscellaneous ---
+                        if agg_stats['aerials_won'] > 0:
+                            st.write("---")
+                            st.subheader("📊 Miscellaneous")
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                st.metric("Aerials Won", f"{int(agg_stats['aerials_won'])}/{int(agg_stats['aerials_won']) + int(agg_stats['aerials_lost'])}")
+                            with col2:
+                                st.metric("Fouls Committed", int(agg_stats['fouls_committed']))
+                            with col3:
+                                st.metric("Fouls Drawn", int(agg_stats['fouls_drawn']))
+                            with col4:
+                                st.metric("Offsides", int(agg_stats['offsides']))
+
+            
             # TABELA STATYSTYK HISTORYCZNYCH - ALL COMPETITIONS
             # For goalkeepers, use goalkeeper_stats table; for others, use competition_stats
             is_goalkeeper = str(row.get('position', '')).strip().upper() in ['GK', 'GOALKEEPER', 'BRAMKARZ']
             stats_to_display = gk_stats if (is_goalkeeper and not gk_stats.empty) else comp_stats
+            
             if not stats_to_display.empty and len(stats_to_display) > 0:
                 st.write("---")
                 st.write("**📊 Season Statistics History (All Competitions)**")
-                # Create display dataframe - different columns for goalkeepers vs outfield players
+                
+                # --- Create display dataframe (zmienne muszą być widoczne dla obu ścieżek) ---
+                rows = []  
+                gk_display = pd.DataFrame()
+                comp_display = pd.DataFrame()
+
                 if is_goalkeeper:
-                    import pandas as _pd
-                    # Standardized columns for all goalkeepers: Season, Type, Competition, Games, Starts, Minutes, CS, GA, Save%
+                    # Standardized columns for all goalkeepers
                     gk_cols = ['season', 'competition_type', 'competition_name', 'games', 'games_starts', 'minutes', 'clean_sheets', 'goals_against', 'save_percentage']
-                    display_cols = ['season', 'competition_type', 'competition_name', 'games', 'games_starts', 'minutes', 'clean_sheets', 'goals_against', 'save_percentage']
+                    
                     if not gk_stats.empty:
                         gk_display = gk_stats.reindex(columns=gk_cols).copy()
                     else:
-                        gk_display = _pd.DataFrame(columns=gk_cols)
-                    # Add missing competitions from comp_stats as fallback rows so every season/competition appears
+                        gk_display = pd.DataFrame(columns=gk_cols)
+                    
+                    # Add missing competitions from comp_stats as fallback rows
                     comp_needed = ['LEAGUE','EUROPEAN_CUP','DOMESTIC_CUP','NATIONAL_TEAM']
-                    comp_display = _pd.DataFrame(columns=gk_cols)
                     if not comp_stats.empty:
                         comp_subset = comp_stats[comp_stats['competition_type'].isin(comp_needed)].copy()
-                        gk_keys = set((str(r['season']), str(r['competition_type']), str(r['competition_name'])) for _, r in gk_display.iterrows())
-                        rows = []
+                        # Klucze istniejące już w gk_display
+                        gk_keys = set()
+                        if not gk_display.empty:
+                            gk_keys = set((str(r['season']), str(r['competition_type']), str(r['competition_name'])) for _, r in gk_display.iterrows())
+                        
                         for _, r in comp_subset.iterrows():
                             key = (str(r['season']), str(r['competition_type']), str(r['competition_name']))
                             if key in gk_keys:
@@ -1351,229 +1413,309 @@ if not filtered_df.empty:
                                 'minutes': safe_int(r.get('minutes')),
                                 'clean_sheets': 0,
                                 'goals_against': 0,
-                                'save_percentage': _pd.NA,
+                                'save_percentage': pd.NA,
                             })
-                        if rows:
-                            comp_display = _pd.DataFrame(rows)
-                    season_display = _pd.concat([gk_display, comp_display], ignore_index=True)
-                    # Remove DFB Pokal bug rows
-                    if not season_display.empty:
+                else:
+                    # LOGIKA DLA GRACZY Z POLA (OUTFIELD PLAYERS)
+                    # Tutaj przypisujemy comp_stats do comp_display, żeby dalsza część kodu miała na czym pracować
+                    if not comp_stats.empty:
+                        comp_display = comp_stats.copy()
+                    
+                # --- KONIEC BLOKU TWORZENIA DANYCH ---
+                
+                # Teraz zmienna `rows` istnieje (może być pusta dla gracza z pola)
+                # Zmienne `gk_display` i `comp_display` też istnieją.
+                
+                # 1. Przygotowanie danych (Rows -> DataFrame)
+                if rows:
+                    comp_display_from_rows = pd.DataFrame(rows)
+                    # Jeśli mamy już comp_display (z bloku else), to je łączymy, jeśli nie - używamy tego z rows
+                    if comp_display.empty:
+                        comp_display = comp_display_from_rows
+                    else:
+                        comp_display = pd.concat([comp_display, comp_display_from_rows], ignore_index=True)
+
+                # 2. Bezpieczne łączenie (Fix na FutureWarning)
+                dfs_to_concat = [df for df in [gk_display, comp_display] if not df.empty]
+                
+                if dfs_to_concat:
+                    season_display = pd.concat(dfs_to_concat, ignore_index=True)
+                else:
+                    season_display = pd.DataFrame()
+
+                # 3. Główna logika przetwarzania (jeśli są dane)
+                if not season_display.empty:
+                    # Usuwanie błędnych wierszy DFB Pokal oznaczonych jako LEAGUE
+                    if 'competition_name' in season_display.columns:
                         mask_bad_row = (
                             season_display['competition_name'].str.contains('DFB', na=False) &
                             season_display['competition_name'].str.contains('Pokal', na=False) &
                             (season_display['competition_type'] == 'LEAGUE')
                         )
                         season_display = season_display[~mask_bad_row]
-                    # If still empty, fallback entirely to comp_stats (rare)
+
+                    # Fallback: Jeśli po czyszczeniu tabela jest pusta, użyj surowych danych comp_stats
                     if season_display.empty and not comp_stats.empty:
-                        season_display = comp_stats[['season', 'competition_type', 'competition_name', 'games', 'minutes']].copy()
-                        season_display['games_starts'] = 0
-                        season_display['clean_sheets'] = 0
-                        season_display['save_percentage'] = _pd.NA
-                        season_display['goals_against'] = 0
-                        season_display = season_display[['season','competition_type','competition_name','games','games_starts','minutes','clean_sheets','goals_against','save_percentage']]
-                    # Combine National Team rows per season into a single aggregate row
-                    if not season_display.empty and 'competition_type' in season_display.columns:
+                        season_display = comp_stats.copy()
+                        # Upewniamy się, że kluczowe kolumny istnieją (inicjalizacja zerami jeśli brak)
+                        required_cols = ['games_starts', 'clean_sheets', 'goals_against', 'save_percentage', 'goals', 'assists', 'xg', 'xa']
+                        for col in required_cols:
+                            if col not in season_display.columns:
+                                season_display[col] = 0
+
+                    # Sprawdzenie typu gracza (Bramkarz vs Gracz z pola) na podstawie kolumn
+                    is_goalkeeper = 'save_percentage' in season_display.columns and season_display['save_percentage'].sum() > 0
+
+                    # 4. Agregacja Reprezentacji (National Team)
+                    if 'competition_type' in season_display.columns:
                         national_comp_names = ['WCQ', 'World Cup', 'UEFA Nations League', 'UEFA Euro Qualifying', 'UEFA Euro', 'Friendlies (M)', 'World Cup Qualifying']
                         nt_mask = (season_display['competition_type'] == 'NATIONAL_TEAM') | (season_display['competition_name'].isin(national_comp_names))
 
-                        # UJEDNOLICENIE (GK): w jednym wierszu "National Team (2025)" chcemy mieć:
-                        # - Friendlies grane w 2025 (zwykle season=2025)
-                        # - WCQ 2026, które bywa zapisane w bazie jako season=2026
-                        # Dlatego WCQ 2026 przepinamy na season=2025 PRZED agregacją.
+                        # Fix na lata (np. WCQ 2026 grane w 2025 -> przypisz do sezonu 2025)
                         if nt_mask.any() and 'competition_name' in season_display.columns:
                             wcq_mask = season_display['competition_name'].astype(str).str.contains('WCQ|World Cup Qualifying', case=False, na=False)
                             season_is_2026 = season_display['season'].astype(str).isin(['2026', '2026-2027', '2026/2027']) | (season_display['season'] == 2026)
                             season_display.loc[nt_mask & wcq_mask & season_is_2026, 'season'] = '2025'
 
                         if nt_mask.any():
-                            nt_agg = season_display[nt_mask].groupby('season', as_index=False).agg({
-                                'competition_type': (lambda x: 'NATIONAL_TEAM'),
-                                'competition_name': (lambda x: 'National Team (All)'),
+                            # Rozdzielamy dane
+                            nt_df = season_display[nt_mask].copy()
+                            club_df = season_display[~nt_mask].copy()
+
+                            if is_goalkeeper:
+                                # Logika dla BRAMKARZA
+                                agg_rules = {
+                                    'competition_type': (lambda x: 'NATIONAL_TEAM'),
+                                    'competition_name': (lambda x: 'National Team (All)'),
+                                    'games': 'sum',
+                                    'games_starts': 'sum',
+                                    'minutes': 'sum',
+                                    'clean_sheets': 'sum',
+                                    'goals_against': 'sum',
+                                    'save_percentage': 'mean'
+                                }
+                            else:
+                                # Logika dla GRACZA Z POLA (Outfield)
+                                agg_rules = {
+                                    'competition_type': (lambda x: 'NATIONAL_TEAM'),
+                                    'competition_name': (lambda x: 'National Team (All)'),
+                                    'games': 'sum',
+                                    'minutes': 'sum',
+                                    'goals': 'sum',
+                                    'assists': 'sum',
+                                    'xg': 'sum',
+                                    'xa': 'sum',
+                                    'yellow_cards': 'sum',
+                                    'red_cards': 'sum'
+                                }
+
+                            # Filtrujemy reguły agregacji (tylko kolumny, które faktycznie istnieją)
+                            final_agg_rules = {k: v for k, v in agg_rules.items() if k in nt_df.columns}
+
+                            # Grupujemy i łączymy
+                            if final_agg_rules:
+                                nt_agg = nt_df.groupby('season', as_index=False).agg(final_agg_rules)
+                                season_display = pd.concat([club_df, nt_agg], ignore_index=True)
+
+                    # 5. Formatowanie nazwy sezonu (np. 2025-2026 -> 2025/26)
+                    def format_season(row):
+                        s = str(row['season'])
+                        comp_type = str(row.get('competition_type', ''))
+                        
+                        # Dla kadry zostawiamy sam rok (np. "2025")
+                        if comp_type == 'NATIONAL_TEAM' or 'National' in comp_type:
+                            if '-' in s:
+                                return s.split('-')[0]
+                            return s
+                        
+                        # Dla klubów formatujemy na XX/YY
+                        if s == '2025' or s == '2025-2026' or s == '2026':
+                            return '2025/26'
+                        elif '-' in s:
+                            parts = s.split('-')
+                            if len(parts) == 2 and len(parts[0]) == 4:
+                                # Np. 2023-2024 -> 2023/24
+                                suffix = parts[1][2:] if len(parts[1]) == 4 else parts[1]
+                                return f"{parts[0]}/{suffix}"
+                        return s
+
+                    if 'season' in season_display.columns:
+                        season_display['season'] = season_display.apply(format_season, axis=1)
+
+                    # 6. Finalne czyszczenie typów (Fix na FutureWarning: Downcasting)
+                    season_display = season_display.fillna(0).infer_objects(copy=False)
+
+                    # --- SUPER CUP LABELING (history table) ---
+                    super_cup_keywords = [
+                        'super cup',
+                        'uefa super cup',
+                        'supercopa',
+                        'supercoppa',
+                        'superpuchar',
+                        'community shield',
+                        'supercup',
+                        'dfl-supercup',
+                        'supertaca',
+                        'supertaça',
+                        'trophée des champions',
+                        'trofeo de campeones',
+                    ]
+
+                    def _format_season_short(season_str: str) -> str:
+                        s = str(season_str or '')
+                        if '/' in s:
+                            a, b = s.split('/', 1)
+                            b2 = b[-2:] if len(b) >= 2 else b
+                            return f"{a}-{b2}"
+                        return s
+
+                    if 'competition_name' in season_display.columns and 'season' in season_display.columns:
+                        comp_series = season_display['competition_name'].astype(str)
+                        sc_mask = pd.Series(False, index=season_display.index)
+                        for kw in super_cup_keywords:
+                            sc_mask = sc_mask | comp_series.str.contains(kw, case=False, na=False)
+
+                        if sc_mask.any():
+                            season_display.loc[sc_mask, 'season'] = season_display.loc[sc_mask].apply(
+                                lambda r: f"{_format_season_short(r['season'])} Domestic Cups - {r['competition_name']}",
+                                axis=1,
+                            )
+
+                    # FIX: Aggregate duplicate rows after season normalization
+                    if not season_display.empty:
+                        # Group by season, competition_type, competition_name and sum numeric columns
+                                            # FIX: Aggregate duplicate rows after season normalization
+                        if is_goalkeeper:
+                        # Sprawdzamy, które kolumny bramkarskie faktycznie istnieją
+                            gk_aggs = {
                                 'games': 'sum',
                                 'games_starts': 'sum',
                                 'minutes': 'sum',
                                 'clean_sheets': 'sum',
                                 'goals_against': 'sum',
-                                'save_percentage': 'mean',
-                            })
-                            season_display = _pd.concat([season_display[~nt_mask], nt_agg], ignore_index=True)
-                else:
-                    # Outfield player stats
-                    season_display = comp_stats[['season', 'competition_type', 'competition_name', 'games', 'goals', 'assists', 'xg', 'xa', 'yellow_cards', 'red_cards', 'minutes']].copy()
-                    
-                    # Aggregate National Team rows per season (WCQ + Friendlies => National Team (All))
-                    if not season_display.empty and 'competition_type' in season_display.columns:
-                        nt_mask = season_display['competition_type'] == 'NATIONAL_TEAM'
-                        if nt_mask.any():
-                            nt_agg = season_display[nt_mask].groupby('season', as_index=False).agg({
-                                'competition_type': 'first',
-                                'competition_name': (lambda x: 'National Team (All)'),
-                                'games': 'sum',
-                                'goals': 'sum',
-                                'assists': 'sum',
-                                'xg': 'sum',
-                                'xa': 'sum',
-                                'yellow_cards': 'sum',
-                                'red_cards': 'sum',
-                                'minutes': 'sum',
-                            })
-                            season_display = pd.concat([season_display[~nt_mask], nt_agg], ignore_index=True)
-                # Normalize season display
-                # IMPORTANT: Keep national team years as-is (2025), don't convert to season format (2025/26)
-                def format_season(row):
-                    s = str(row['season'])
-                    comp_type = row.get('competition_type', '')
-                    
-                    # Keep national team years as single year (2025, not 2025/26)
-                    if comp_type == 'NATIONAL_TEAM' or 'National' in str(comp_type):
-                        # Extract just the year
-                        if '-' in s:
-                            return s.split('-')[0]  # "2025-2026" -> "2025"
-                        return s  # "2025" -> "2025"
-                    
-                    # For club competitions, format as season
-                    if s == '2025' or s == '2025-2026' or s == '2026':
-                        return '2025/26'
-                    elif '-' in s:
-                        parts = s.split('-')
-                        if len(parts) == 2 and len(parts[0]) == 4:
-                            if len(parts[1]) == 4:
-                                return f"{parts[0]}/{parts[1][2:]}"
+                                'save_percentage': 'mean'
+                            }
+                            valid_gk_aggs = {k: v for k, v in gk_aggs.items() if k in season_display.columns}
+                            
+                            if valid_gk_aggs:
+                                season_display = season_display.groupby(['season', 'competition_type', 'competition_name'], as_index=False).agg(valid_gk_aggs)
+                        else:
+                            # Sprawdzamy, które kolumny dla graczy z pola faktycznie istnieją
+                            mappings = [
+                                ('games', ['Games', 'games', 'matches', 'Matches']),
+                                ('goals', ['Goals', 'goals']),
+                                ('assists', ['Assists', 'assists']),
+                                ('xg', ['xG', 'xg', 'Xg']),
+                                ('xa', ['xA', 'xa', 'Xa']),
+                                ('yellow_cards', ['Yellow', 'yellow_cards', 'yellow']),
+                                ('red_cards', ['Red', 'red_cards', 'red']),
+                                ('minutes', ['Minutes', 'minutes', 'Minutes Played'])
+                            ]
+
+                            final_aggs = {}
+
+                            for target_col, candidates in mappings:
+                                # Szukamy pierwszej pasującej kolumny
+                                found_col = next((c for c in candidates if c in season_display.columns), None)
+                                
+                                if found_col:
+                                    # Konwertujemy na liczbę (naprawia błąd typów!)
+                                    # Używamy target_col jako ujednoliconej nazwy
+                                    season_display[target_col] = pd.to_numeric(season_display[found_col], errors='coerce').fillna(0)
+                                    final_aggs[target_col] = 'sum'
+
+                            if final_aggs:
+                                season_display = season_display.groupby(['season', 'competition_type', 'competition_name'], as_index=False).agg(final_aggs)
                             else:
-                                return f"{parts[0]}/{parts[1]}"
-                    return s
-                
-                season_display['season'] = season_display.apply(format_season, axis=1)
+                                season_display = season_display.drop_duplicates(subset=['season', 'competition_type', 'competition_name'])
 
-                # --- SUPER CUP LABELING (history table) ---
-                # Requirement: Super Cups should appear as separate rows in history, e.g.
-                #   "2025-26 Domestic Cups - Supercopa de Espana"
-                # They are excluded from Season Total, but remain in Domestic Cups column.
-                super_cup_keywords = [
-                    'super cup',
-                    'uefa super cup',
-                    'supercopa',
-                    'supercoppa',
-                    'superpuchar',
-                    'community shield',
-                    'supercup',
-                    'dfl-supercup',
-                    'supertaca',
-                    'supertaça',
-                    'trophée des champions',
-                    'trofeo de campeones',
-                ]
+                        # Sort by season (descending) and competition type
+                        comp_type_order = {'LEAGUE': 1, 'EUROPEAN_CUP': 2, 'DOMESTIC_CUP': 3, 'NATIONAL_TEAM': 4}
+                        season_display['comp_sort'] = season_display['competition_type'].map(comp_type_order).fillna(5)
+                        season_display = season_display.sort_values(['season', 'comp_sort'], ascending=[False, True]).reset_index(drop=True)
+                        season_display = season_display.drop('comp_sort', axis=1)
 
-                def _format_season_short(season_str: str) -> str:
-                    # Input is expected like "2025/26" after format_season
-                    s = str(season_str or '')
-                    if '/' in s:
-                        a, b = s.split('/', 1)
-                        b2 = b[-2:] if len(b) >= 2 else b
-                        return f"{a}-{b2}"
-                    return s
+                        
+                    
+                    # Format competition type for display
+                    def format_comp_type(ct):
+                        if ct == 'LEAGUE':
+                            return '🏆 League'
+                        elif ct == 'EUROPEAN_CUP':
+                            return '🌍 European'
+                        elif ct == 'DOMESTIC_CUP':
+                            return '🏆 Domestic Cup'
+                        elif ct == 'NATIONAL_TEAM':
+                            return '🇵🇱 National'
+                        else:
+                            return ct
+                    
+                    season_display['competition_type'] = season_display['competition_type'].apply(format_comp_type)
+                    
+                    # Round xG and xA to 2 decimals (only for outfield players)
+                    if 'xg' in season_display.columns:
+                        season_display['xg'] = season_display['xg'].apply(lambda x: round(x, 2) if pd.notna(x) else 0.0)
+                    if 'xa' in season_display.columns:
+                        season_display['xa'] = season_display['xa'].apply(lambda x: round(x, 2) if pd.notna(x) else 0.0)
+                    
+                    # Fill NaN values with 0 for display
+                    season_display = season_display.fillna(0)
+                    
+                    # Convert numeric columns to int where appropriate
+                    for col in ['games', 'goals', 'clean_sheets', 'assists', 'shots', 'shots_on_target', 'yellow_cards', 'red_cards', 'minutes', 'goals_against']:
+                        if col in season_display.columns:
+                            season_display[col] = season_display[col].astype(int)
+                    
+                    # Round save_percentage for goalkeepers
+                    if 'save_percentage' in season_display.columns:
+                        season_display['save_percentage'] = season_display['save_percentage'].apply(lambda x: round(x, 1) if pd.notna(x) else 0.0)
+                    
+                    if is_goalkeeper and not gk_stats.empty:
+                        # Oczekujemy 9 kolumn dla bramkarza
+                        expected_gk_cols = ['season', 'competition_type', 'competition_name', 'games', 'games_starts', 'minutes', 'clean_sheets', 'goals_against', 'save_percentage']
+                        # Jeśli mamy tyle kolumn ile trzeba (9), zmieniamy nazwy
+                        if len(season_display.columns) == len(expected_gk_cols):
+                             season_display.columns = ['Season', 'Type', 'Competition', 'Games', 'Starts', 'Minutes', 'CS', 'GA', 'Save%']
+                        else:
+                             # Fallback: Nie zmieniaj nazw, jeśli liczba się nie zgadza, by nie wywalić apki
+                             pass 
 
-                if 'competition_name' in season_display.columns and 'season' in season_display.columns:
-                    comp_series = season_display['competition_name'].astype(str)
-                    sc_mask = pd.Series(False, index=season_display.index)
-                    for kw in super_cup_keywords:
-                        sc_mask = sc_mask | comp_series.str.contains(kw, case=False, na=False)
-
-                    if sc_mask.any():
-                        season_display.loc[sc_mask, 'season'] = season_display.loc[sc_mask].apply(
-                            lambda r: f"{_format_season_short(r['season'])} Domestic Cups - {r['competition_name']}",
-                            axis=1,
-                        )
-
-                # FIX: Aggregate duplicate rows after season normalization
-                # This happens when we have both "2025" and "2026" in database which both become "2025/26"
-                # IMPORTANT: National team rows should NOT be aggregated with club rows
-                # National team shows year (2025), clubs show season (2025/26)
-                if not season_display.empty:
-                    # Group by season, competition_type, competition_name and sum numeric columns
-                    if is_goalkeeper:
-                        season_display = season_display.groupby(['season', 'competition_type', 'competition_name'], as_index=False).agg({
-                            'games': 'sum',
-                            'games_starts': 'sum',
-                            'minutes': 'sum',
-                            'clean_sheets': 'sum',
-                            'goals_against': 'sum',
-                            'save_percentage': 'mean'
-                        })
                     else:
-                        season_display = season_display.groupby(['season', 'competition_type', 'competition_name'], as_index=False).agg({
-                            'games': 'sum',
-                            'goals': 'sum',
-                            'assists': 'sum',
-                            'xg': 'sum',
-                            'xa': 'sum',
-                            'yellow_cards': 'sum',
-                            'red_cards': 'sum',
-                            'minutes': 'sum'
-                        })
-                # Sort by season (descending) and competition type to group similar competitions together
-                # Define competition type order for sorting
-                comp_type_order = {'LEAGUE': 1, 'EUROPEAN_CUP': 2, 'DOMESTIC_CUP': 3, 'NATIONAL_TEAM': 4}
-                season_display['comp_sort'] = season_display['competition_type'].map(comp_type_order).fillna(5)
-                season_display = season_display.sort_values(['season', 'comp_sort'], ascending=[False, True]).reset_index(drop=True)
-                season_display = season_display.drop('comp_sort', axis=1)
-                # Format competition type for display
-                def format_comp_type(ct):
-                    if ct == 'LEAGUE':
-                        return '🏆 League'
-                    elif ct == 'EUROPEAN_CUP':
-                        return '🌍 European'
-                    elif ct == 'DOMESTIC_CUP':
-                        return '🏆 Domestic Cup'
-                    elif ct == 'NATIONAL_TEAM':
-                        return '🇵🇱 National'
-                    else:
-                        return ct
-                season_display['competition_type'] = season_display['competition_type'].apply(format_comp_type)
-                # Round xG and xA to 2 decimals (only for outfield players)
-                if 'xg' in season_display.columns:
-                    season_display['xg'] = season_display['xg'].apply(lambda x: round(x, 2) if pd.notna(x) else 0.0)
-                if 'xa' in season_display.columns:
-                    season_display['xa'] = season_display['xa'].apply(lambda x: round(x, 2) if pd.notna(x) else 0.0)
-                # Fill NaN values with 0 for display
-                season_display = season_display.fillna(0)
-                # Convert numeric columns to int where appropriate, only if column exists
-                for col in ['games', 'goals', 'clean_sheets', 'assists', 'shots', 'shots_on_target', 'yellow_cards', 'red_cards', 'minutes', 'goals_against']:
-                    if col in season_display.columns:
-                        season_display[col] = season_display[col].astype(int)
-                # Round save_percentage for goalkeepers
-                if 'save_percentage' in season_display.columns:
-                    season_display['save_percentage'] = season_display['save_percentage'].apply(lambda x: round(x, 1) if pd.notna(x) else 0.0)
-                # Rename columns for display
-                if is_goalkeeper and not gk_stats.empty:
-                    season_display.columns = ['Season', 'Type', 'Competition', 'Games', 'Starts', 'Minutes', 'CS', 'GA', 'Save%']
-                else:
-                    season_display.columns = ['Season', 'Type', 'Competition', 'Games', 'Goals', 'Assists', 'xG', 'xA', 'Yellow', 'Red', 'Minutes']
-                # --- CLUB WORLD CUP LABELING (history table) ---
-                if 'competition_name' in season_display.columns:
-                    cwc_mask = season_display['competition_name'].apply(is_club_world_cup)
-                    if cwc_mask.any() and 'season' in season_display.columns:
-                        season_display.loc[cwc_mask, 'season'] = season_display.loc[cwc_mask, 'season'].astype(str) + ' Club World Cup'
+                        # Oczekujemy 11 kolumn dla gracza z pola
+                        # Musimy upewnić się, że season_display ma dokładnie te kolumny, których oczekujemy
+                        field_cols_order = ['season', 'competition_type', 'competition_name', 'games', 'goals', 'assists', 'xg', 'xa', 'yellow_cards', 'red_cards', 'minutes']
+                        
+                        # Tworzymy nowy DF tylko z istniejących kolumn w odpowiedniej kolejności
+                        # Brakujące kolumny wypełniamy zerami, żeby pasowało do 11 nazw
+                        for col in field_cols_order:
+                            if col not in season_display.columns:
+                                season_display[col] = 0
+                        
+                        # Reorganizujemy kolejność, żeby pasowała do listy nazw
+                        season_display = season_display[field_cols_order]
+                        
+                        # Teraz mamy pewność, że jest 11 kolumn -> zmieniamy nazwy
+                        season_display.columns = ['Season', 'Type', 'Competition', 'Games', 'Goals', 'Assists', 'xG', 'xA', 'Yellow', 'Red', 'Minutes']
+                    
+                    # --- CLUB WORLD CUP LABELING (history table) ---
+                    if 'Competition' in season_display.columns:
+                        cwc_mask = season_display['Competition'].apply(is_club_world_cup)
+                        if cwc_mask.any() and 'Season' in season_display.columns:
+                            season_display.loc[cwc_mask, 'Season'] = season_display.loc[cwc_mask, 'Season'].astype(str) + ' Club World Cup'
 
-                st.dataframe(season_display, use_container_width=True, hide_index=True)
-            elif not player_stats.empty and len(player_stats) > 0:
-                # Fallback to old stats if competition_stats not available
-                st.write("---")
-                st.write("**📊 Season Statistics History**")
-                season_display = player_stats[['season', 'team', 'matches', 'goals', 'assists', 'yellow_cards', 'red_cards', 'minutes_played']].copy()
-                season_display['season'] = season_display['season'].apply(lambda x: f"{x}/{x+1}")
-                season_display.columns = ['Season', 'Team', 'Matches', 'Goals', 'Assists', 'Yellow', 'Red', 'Minutes']
-                # --- CLUB WORLD CUP LABELING (history table) ---
-                if 'competition_name' in season_display.columns:
-                    cwc_mask = season_display['competition_name'].apply(is_club_world_cup)
-                    if cwc_mask.any() and 'season' in season_display.columns:
-                        season_display.loc[cwc_mask, 'season'] = season_display.loc[cwc_mask, 'season'].astype(str) + ' Club World Cup'
-
-                st.dataframe(season_display, use_container_width=True, hide_index=True)
-            # ===== NOWA SEKCJA: MECZE GRACZA ===== 
-            # ===== NOWA SEKCJA: MECZE GRACZA ===== 
-            player_matches = matches_df[matches_df['player_id'] == row['id']] if not matches_df.empty and 'player_id' in matches_df.columns else pd.DataFrame()
+                    st.dataframe(season_display, width='stretch', hide_index=True)
+                elif not player_stats.empty and len(player_stats) > 0:
+                    # Fallback to old stats if competition_stats not available
+                    st.write("---")
+                    st.write("**📊 Season Statistics History**")
+                    season_display = player_stats[['season', 'team', 'matches', 'goals', 'assists', 'yellow_cards', 'red_cards', 'minutes_played']].copy()
+                    season_display['season'] = season_display['season'].apply(lambda x: f"{x}/{x+1}")
+                    season_display.columns = ['Season', 'Team', 'Matches', 'Goals', 'Assists', 'Yellow', 'Red', 'Minutes']
+                    st.dataframe(season_display, width='stretch', hide_index=True)
+            
+                        # ===== NOWA SEKCJA: MECZE GRACZA ===== 
+            # Use already lazy-loaded matches_df from line 490 (no need to filter again)
+            player_matches = matches_df
             
             if not player_matches.empty and len(player_matches) > 0:
                 st.write("---")
@@ -1581,16 +1723,22 @@ if not filtered_df.empty:
                 
                 # POPRAWKA: konwersja daty i sort malejąco po dacie
                 pm = player_matches.copy()
-                if pm['match_date'].dtype != 'datetime64[ns]':
+                # Bezpieczna konwersja daty
+                if 'match_date' in pm.columns:
                     pm['match_date'] = pd.to_datetime(pm['match_date'], errors='coerce')
-                pm = pm.dropna(subset=['match_date'])
-                pm = pm.sort_values('match_date', ascending=False)
+                    pm = pm.dropna(subset=['match_date'])
+                    pm = pm.sort_values('match_date', ascending=False)
                 
                 # Pokaż ostatnie 10 meczów
                 recent_matches = pm.head(10)
+
                 for idx_match, match in recent_matches.iterrows():
-                    # Ikona wyniku
-                    result_str = match['result'] if pd.notna(match['result']) else ''
+                    # --- DEFINICJE ZMIENNYCH DLA POJEDYNCZEGO MECZU ---
+                    
+                    # 1. Wynik meczu i ikona
+                    raw_result = match.get('result', '')
+                    result_str = str(raw_result) if pd.notna(raw_result) else ''
+                    
                     if result_str.startswith('W'):
                         result_icon = "🟢"
                     elif result_str.startswith('D'):
@@ -1599,40 +1747,68 @@ if not filtered_df.empty:
                         result_icon = "🔴"
                     else:
                         result_icon = "⚪"
-                    # Format daty
-                    match_date = pd.to_datetime(match['match_date']).strftime('%d.%m.%Y')
-                    # Competition badge
-                    comp = match['competition'] if pd.notna(match['competition']) else 'N/A'
-                    venue_icon = "🏠" if match['venue'] == 'Home' else "✈️"
-                    # Stats
-                    goals = safe_int(match.get('goals'))
-                    # Force assists to 0 for goalkeepers
-                    if is_gk:
-                        assists = 0
-                    else:
-                        assists = safe_int(match.get('assists'))
-                    minutes = safe_int(match.get('minutes_played'))
-                    # Wyświetl mecz
+                    
+                    # 2. Format daty
+                    match_date_str = ""
+                    if pd.notna(match.get('match_date')):
+                        match_date_str = pd.to_datetime(match['match_date']).strftime('%d.%m.%Y')
+                    
+                    # 3. Podstawowe dane meczowe
+                    comp = match.get('competition', 'N/A')
+                    venue_icon = "🏠" if match.get('venue') == 'Home' else "✈️"
+                    opponent = match.get('opponent', 'Unknown')
+                    
+                    # 4. Statystyki liczbowe (bezpieczne pobieranie)
+                    def safe_get_int(val):
+                        try:
+                            return int(val) if pd.notna(val) else 0
+                        except:
+                            return 0
+
+                    goals = safe_get_int(match.get('goals'))
+                    # Force assists to 0 for goalkeepers if variable exists, else assume False
+                    local_is_gk = locals().get('is_goalkeeper', False) # Bezpiecznik
+                    assists = 0 if local_is_gk else safe_get_int(match.get('assists'))
+                    minutes = safe_get_int(match.get('minutes_played'))
+                    
+                    # --- WYŚWIETLANIE WIERSZA MECZU ---
                     col1, col2, col3, col4 = st.columns([1, 3, 2, 2])
+                    
                     with col1:
                         st.write(f"{result_icon}")
+                        st.caption(f"{match_date_str}")
+                    
                     with col2:
-                        opponent = match['opponent'] if pd.notna(match['opponent']) else 'Unknown'
                         st.write(f"**{venue_icon} vs {opponent}**")
-                        st.caption(f"{comp} • {match_date}")
+                        st.caption(f"{comp}")
+
                     with col3:
+                        # Tutaj używamy result_str (np. "W 2-1" lub sam wynik jeśli masz go osobno)
+                        # Jeśli result_str to tylko "W", "L", "D", to może być mało informacyjne.
+                        # Zakładam, że w kolumnie 'result' masz coś w stylu "W 3-1"
                         st.write(f"**{result_str}**")
                         st.caption(f"{minutes}'")
+
                     with col4:
                         perf = f"{goals}G {assists}A"
+                        # Wyróżnienie gola/asysty
                         if goals > 0 or assists > 0:
                             st.write(f"⚽ **{perf}**")
                         else:
                             st.write(f"{perf}")
+                        
                         # xG jeśli dostępne
-                        if pd.notna(match['xg']) and match['xg'] > 0:
-                            st.caption(f"xG: {match['xg']:.2f}")
-                    st.write("")  # Odstęp między meczami
+                        xg_val = match.get('xg')
+                        if pd.notna(xg_val) and isinstance(xg_val, (int, float)) and xg_val > 0:
+                            st.caption(f"xG: {xg_val:.2f}")
+
+                    st.divider()
+
+
+    # --- KONIEC PĘTLI FOR ---
+    # Kod poniżej wykonuje się raz, po wyświetleniu wszystkich meczów.
+    # Wcięcie musi pasować do poziomu, na którym zaczęła się pętla (lub blok if, w którym była pętla).
+    
     # Download option
     st.write("---")
     csv = filtered_df.to_csv(index=False)
@@ -1642,6 +1818,9 @@ if not filtered_df.empty:
         file_name="polish_players.csv",
         mime="text/csv"
     )
+
+# Blok ELSE dla głównego warunku (np. if not filtered_df.empty:)
+# Musi być na samym początku linii (lub wciśnięty tak samo jak odpowiadający mu IF)
 else:
     if selected_team != 'All':
         st.warning(f"⚠️ No players found matching '{search_name}' in team '{selected_team}'")
@@ -1649,11 +1828,15 @@ else:
     else:
         st.warning(f"⚠️ No players found matching '{search_name}'")
         st.info("💡 Try a different search term")
+
+# --- Elementy Sidebar i Footer (zawsze widoczne, brak wcięć) ---
+
 # Sidebar info
 st.sidebar.markdown("---")
 st.sidebar.info(
-    "💡 **Tip**: Use filters to narrow down results or search by player name."
+    "💡 Tip: Use filters to narrow down results or search by player name."
 )
+
 # Refresh button
 if st.sidebar.button("🔄 Refresh Data"):
     st.cache_data.clear()
@@ -1679,3 +1862,10 @@ st.markdown("""
     </p>
 </div>
 """, unsafe_allow_html=True)
+
+
+
+
+
+
+

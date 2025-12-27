@@ -215,7 +215,30 @@ st.markdown(
 )
 
 # Initialize API client
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_player_matches_for_card(player_id, season="2025-2026"):
+    """Load matches for a specific player (lazy loading)."""
+    try:
+        api_client = get_api_client()
+        # Fetch matches for current season (includes international matches for invalid year-range)
+        # Limit to 1000 to be safe, though one season won't exceed that
+        return api_client.get_player_matches(player_id, season=season, limit=1000)
+    except Exception as e:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def load_player_stats(player_id, stats_type='competition'):
+    """Load stats for a specific player (lazy loading)."""
+    try:
+        api_client = get_api_client()
+        if stats_type == 'goalkeeper':
+            return api_client.get_goalkeeper_stats(player_id)
+        else:
+            return api_client.get_competition_stats(player_id)
+    except Exception as e:
+        return pd.DataFrame()
+
+@st.cache_data(ttl=3600, show_spinner=False)
 def load_data():
     """Load players data from API."""
     try:
@@ -224,17 +247,13 @@ def load_data():
         # Pobierz dane graczy
         players_df = api_client.get_all_players()
         
-        # Pobierz statystyki competition_stats
-        comp_stats_df = api_client.get_all_competition_stats()
+        # Disable global stats fetching to save egress/bandwidth
+        comp_stats_df = pd.DataFrame() 
+        gk_stats_df = pd.DataFrame()
+        matches_df = pd.DataFrame() 
         
-        # Pobierz goalkeeper_stats
-        gk_stats_df = api_client.get_all_goalkeeper_stats()
-        
-        # Pobierz mecze graczy
-        matches_df = api_client.get_all_matches()
-        
-        # Note: player_season_stats table is deprecated, using competition_stats instead
-        stats_df = pd.DataFrame()  # Empty for backward compatibility
+        # Note: player_season_stats table is deprecated
+        stats_df = pd.DataFrame() 
         
         return players_df, stats_df, comp_stats_df, gk_stats_df, matches_df
     except Exception as e:
@@ -245,6 +264,10 @@ def load_data():
 
 # Sidebar - Search
 st.sidebar.header("🔎 Player Search")
+if st.sidebar.button("🔄 Refresh Data (Clear Cache)"):
+    st.cache_data.clear()
+    st.rerun()
+
 search_name = st.sidebar.text_input("Enter player name", placeholder="e.g. Lewandowski, Zieliński...")
 
 # Optional filters
@@ -256,7 +279,7 @@ df, stats_df, comp_stats_df, gk_stats_df, matches_df = load_data()
 
 if df.empty:
     st.warning("No data available. Please sync data first.")
-    st.info("Run: python sync_all_players.py")
+    st.info("Run: python sync_player_full.py \"Player Name\"")
     st.stop()
 
 # Filters
@@ -301,16 +324,51 @@ if not search_name and selected_team == 'All':
 
 # Display filtered results
 if not filtered_df.empty:
-    for idx, row in filtered_df.iterrows():
-        # Przywróć pobieranie competition_stats i goalkeeper_stats dla każdej karty zawodnika
-        comp_stats = comp_stats_df[comp_stats_df['player_id'] == row['id']].sort_values(['season', 'competition_type'], ascending=False) if not comp_stats_df.empty and 'player_id' in comp_stats_df.columns else pd.DataFrame()
-        gk_stats = gk_stats_df[gk_stats_df['player_id'] == row['id']].sort_values(['season', 'competition_type'], ascending=False) if not gk_stats_df.empty and 'player_id' in gk_stats_df.columns else pd.DataFrame()
+    # --- PAGINACJA (Optymalizacja Supabase) ---
+    ITEMS_PER_PAGE = 5
+    total_players = len(filtered_df)
+    
+    if total_players > ITEMS_PER_PAGE:
+        total_pages = math.ceil(total_players / ITEMS_PER_PAGE)
+        
+        col_pag1, col_pag2 = st.columns([3, 1])
+        with col_pag1:
+            st.info(f"⚡ Found {total_players} players. Showing {ITEMS_PER_PAGE} per page to optimize database usage.")
+        with col_pag2:
+            page = st.number_input("Page", min_value=1, max_value=total_pages, value=1, step=1)
+            
+        start_idx = (page - 1) * ITEMS_PER_PAGE
+        end_idx = start_idx + ITEMS_PER_PAGE
+        
+        # Slice the dataframe for current page
+        filtered_df_page = filtered_df.iloc[start_idx:end_idx]
+    else:
+        filtered_df_page = filtered_df
+
+    for idx, row in filtered_df_page.iterrows():
+        # LAZY LOAD STATS for this player only
+        # This fixes the missing data issue caused by global limit
+        comp_stats = load_player_stats(row['id'], 'competition')
+        if not comp_stats.empty:
+             comp_stats['season'] = comp_stats['season'].astype(str).str.strip()
+             comp_stats['competition_type'] = comp_stats['competition_type'].astype(str).str.strip().str.upper()
+             comp_stats = comp_stats.sort_values(['season', 'competition_type'], ascending=False)
+        
+        gk_stats = load_player_stats(row['id'], 'goalkeeper')
+        if not gk_stats.empty:
+             gk_stats['season'] = gk_stats['season'].astype(str).str.strip()
+             gk_stats['competition_type'] = gk_stats['competition_type'].astype(str).str.strip().str.upper()
+             gk_stats = gk_stats.sort_values(['season', 'competition_type'], ascending=False)
         
         # Przywróć pobieranie player_stats, bo jest używane w innych sekcjach
         player_stats = stats_df[stats_df['player_id'] == row['id']].sort_values('season', ascending=False) if not stats_df.empty and 'player_id' in stats_df.columns else pd.DataFrame()
         
+        # LAZY LOAD MATCHES for this player only
+        # This drastically reduces egress by not loading 100MB of matches for all players
+        matches_df_player = load_player_matches_for_card(row['id'], "2025-2026")
+        
         # Tytuł karty
-        current_season = ['2025-2026', '2025/2026', 2025]
+        current_season = ['2025-2026', '2025/2026', '2025']
         season_current = player_stats[player_stats['season'].isin(current_season)] if not player_stats.empty else pd.DataFrame()
         
         # If goalkeeper, always show 0 goals in card title
@@ -326,7 +384,7 @@ if not filtered_df.empty:
             # Check if player has CWC appearances (minutes > 0)
             season_start = '2025-07-01'
             season_end = '2026-06-30'
-            has_cwc = has_cwc_appearances(row['id'], matches_df, season_start, season_end)
+            has_cwc = has_cwc_appearances(row['id'], matches_df_player, season_start, season_end)
             
             # Dynamic column layout: 6 columns if CWC exists, 5 otherwise
             if has_cwc:
@@ -459,7 +517,9 @@ if not filtered_df.empty:
                                 m3.metric("GA", safe_int(gk_row.get('goals_against')))
                     
                     if not found_euro and not comp_stats.empty:
-                        comp_stats_2526 = comp_stats[comp_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
+                        # Robust filtering
+                        current_season_filters = ['2025-2026', '2025/2026', '2025', 2025]
+                        comp_stats_2526 = comp_stats[comp_stats['season'].isin(current_season_filters)]
                         euro_stats = comp_stats_2526[comp_stats_2526['competition_type'] == 'EUROPEAN_CUP']
                         # Exclude Club World Cup from European Cups
                         if not euro_stats.empty:
@@ -556,8 +616,14 @@ if not filtered_df.empty:
                                 m3.metric("GA", safe_int(gk_row.get('goals_against')))
 
                     if not found_domestic and not comp_stats.empty:
-                        comp_stats_2526 = comp_stats[comp_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
+                        # Ensure robust filtering
+                        current_season_filters = ['2025-2026', '2025/2026', '2025', 2025]
+                        comp_stats_2526 = comp_stats[comp_stats['season'].isin(current_season_filters)]
+                        comp_stats_2526 = comp_stats[comp_stats['season'].isin(current_season_filters)]
                         domestic_stats = comp_stats_2526[comp_stats_2526['competition_type'] == 'DOMESTIC_CUP']
+                        if domestic_stats.empty:
+                            # Fallback: Check for 'CUP' in name if type check fails
+                            domestic_stats = comp_stats_2526[comp_stats_2526['competition_name'].str.contains('Cup|Puchar|Pokal|Copa', case=False, na=False)]
                         
                         if not domestic_stats.empty:
                             found_domestic = True
@@ -576,8 +642,10 @@ if not filtered_df.empty:
                     row_to_show = None
                     is_gk_display = False
                     
+                    current_season_filters = ['2025-2026', '2025/2026', '2025', 2025]
+                    
                     if is_gk and not gk_stats.empty:
-                        gk_stats_2526 = gk_stats[gk_stats['season'].isin(['2025-2026', '2025/2026', 2025, '2025'])]
+                        gk_stats_2526 = gk_stats[gk_stats['season'].isin(current_season_filters)]
                         domestic_stats = gk_stats_2526[gk_stats_2526['competition_type'] == 'DOMESTIC_CUP']
                         if not domestic_stats.empty:
                             row_to_show = domestic_stats.iloc[0]
@@ -751,7 +819,7 @@ if not filtered_df.empty:
                         player_id=row['id'],
                         start_date=season_start,
                         end_date=season_end,
-                        matches_df=matches_df,
+                        matches_df=matches_df_player,
                         exclude_competitions=national_competitions,
                         exclude_competition_keywords=super_cup_keywords,
                     )
@@ -972,7 +1040,7 @@ if not filtered_df.empty:
                         if cwc_mask.any() and 'season' in season_display.columns:
                             season_display.loc[cwc_mask, 'season'] = season_display.loc[cwc_mask, 'season'].astype(str) + ' Club World Cup'
 
-                    st.dataframe(season_display, width=None, use_container_width=True, hide_index=True)
+                    st.dataframe(season_display, width='stretch', hide_index=True)
                     # NOTE: Streamlit's warning says "replace use_container_width with width".
                     # However, in st.dataframe, use_container_width=True IS the correct way to stretch in current versions.
                     # The warning likely refers to a chart or a deprecated usage.
@@ -983,7 +1051,8 @@ if not filtered_df.empty:
                     
             
             # ===== NOWA SEKCJA: MECZE GRACZA =====
-            player_matches = matches_df[matches_df['player_id'] == row['id']] if not matches_df.empty and 'player_id' in matches_df.columns else pd.DataFrame()
+            # Use lazy-loaded matches (matches_df_player) instead of empty global matches_df
+            player_matches = matches_df_player
             
             if not player_matches.empty and len(player_matches) > 0:
                 st.write("---")

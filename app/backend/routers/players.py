@@ -1,27 +1,42 @@
 ﻿from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..database import get_db
-from ..schemas.player import PlayerResponse, PlayerCreate
-from ..models.player import Player
-from ..models.competition_stats import CompetitionStats
-from ..models.goalkeeper_stats import GoalkeeperStats
-from ..models.player_match import PlayerMatch
-from datetime import date
 import logging
-
+from datetime import date
+from app.backend.database import get_db
+from app.backend.schemas.player import PlayerResponse, PlayerCreate
+from app.backend.models.player import Player
+from app.backend.models.competition_stats import CompetitionStats
+from app.backend.models.goalkeeper_stats import GoalkeeperStats
+from app.backend.models.player_match import PlayerMatch
 
 logger = logging.getLogger(__name__)
+
+# ... reszta kodu bez zmian ...
+
 
 router = APIRouter(prefix="/players", tags=["players"])
 
 @router.get("/", response_model=list[PlayerResponse])
-def get_all_players(db: Session = Depends(get_db)):
-    """Zwraca wszystkich piłkarzy z bazy"""
+def get_all_players(
+    db: Session = Depends(get_db),
+    name: str | None = None,
+    team: str | None = None,
+    league: str | None = None,
+    limit: int = 200,
+    offset: int = 0,
+):
+    """Zwraca listę piłkarzy z opcjonalnymi filtrami i paginacją to limit payload size."""
     try:
-        players = db.query(Player).all()
-        logger.info(f"Found {len(players)} players in database")
-        if players:
-            logger.info(f"First player: id={players[0].id}, name={players[0].name}, api_id={players[0].api_id}")
+        query = db.query(Player)
+        if name:
+            query = query.filter(Player.name.ilike(f"%{name}%"))
+        if team:
+            query = query.filter(Player.team.ilike(f"%{team}%"))
+        if league:
+            query = query.filter(Player.league.ilike(f"%{league}%"))
+        query = query.order_by(Player.id.asc()).offset(max(offset, 0)).limit(max(min(limit, 1000), 1))
+        players = query.all()
+        logger.info(f"Returning {len(players)} players (limit={limit}, offset={offset})")
         return players
     except Exception as e:
         logger.error(f"Error getting players: {e}", exc_info=True)
@@ -37,10 +52,27 @@ def get_player(player_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/stats/competition")
-def get_all_competition_stats(db: Session = Depends(get_db)):
-    """Zwraca wszystkie statystyki competition_stats"""
+def get_all_competition_stats(
+    db: Session = Depends(get_db),
+    player_id: int | None = None,
+    season: str | None = None,
+    competition_type: str | None = None,
+    limit: int = 200,
+    offset: int = 0,
+):
+    """Zwraca statystyki competition_stats z opcjonalnymi filtrami i limitem.
+    Domyślnie ogranicza odpowiedź, aby zmniejszyć transfer.
+    """
     try:
-        stats = db.query(CompetitionStats).all()
+        query = db.query(CompetitionStats)
+        if player_id:
+            query = query.filter(CompetitionStats.player_id == player_id)
+        if season:
+            query = query.filter(CompetitionStats.season == season)
+        if competition_type:
+            query = query.filter(CompetitionStats.competition_type.ilike(f"%{competition_type}%"))
+        query = query.order_by(CompetitionStats.id.desc()).offset(max(offset, 0)).limit(max(min(limit, 1000), 1))
+        stats = query.all()
         return [
             {
                 "id": s.id,
@@ -70,10 +102,27 @@ def get_all_competition_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/stats/goalkeeper")
-def get_all_goalkeeper_stats(db: Session = Depends(get_db)):
-    """Zwraca wszystkie statystyki goalkeeper_stats"""
+def get_all_goalkeeper_stats(
+    db: Session = Depends(get_db),
+    player_id: int | None = None,
+    season: str | None = None,
+    competition_type: str | None = None,
+    limit: int = 200,
+    offset: int = 0,
+):
+    """Zwraca statystyki goalkeeper_stats z opcjonalnymi filtrami i limitem.
+    Domyślnie ogranicza odpowiedź, aby zmniejszyć transfer.
+    """
     try:
-        stats = db.query(GoalkeeperStats).all()
+        query = db.query(GoalkeeperStats)
+        if player_id:
+            query = query.filter(GoalkeeperStats.player_id == player_id)
+        if season:
+            query = query.filter(GoalkeeperStats.season == season)
+        if competition_type:
+            query = query.filter(GoalkeeperStats.competition_type.ilike(f"%{competition_type}%"))
+        query = query.order_by(GoalkeeperStats.id.desc()).offset(max(offset, 0)).limit(max(min(limit, 1000), 1))
+        stats = query.all()
         return [
             {
                 "id": s.id,
