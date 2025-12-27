@@ -400,8 +400,9 @@ if df.empty:
 teams = ['All'] + sorted(df['team'].dropna().unique().tolist())
 selected_team = st.sidebar.selectbox("Team", teams)
 
-players_list = ['All'] + [f"{row['name']} ({get_full_position(row.get('position'))})" for _, row in df.dropna(subset=['name']).iterrows()]
-players_list = sorted(list(set(players_list))) # Unique and sorted
+# Players list (sorted names first, then prepended with 'All')
+raw_players = [f"{row['name']} ({get_full_position(row.get('position'))})" for _, row in df.dropna(subset=['name']).iterrows()]
+players_list = ['All'] + sorted(list(set(raw_players)))
 selected_player_str = st.sidebar.selectbox("Player (optional)", players_list)
 
 # Apply filters
@@ -1107,7 +1108,7 @@ if not filtered_df.empty:
                                     if pd.notna(prog_recv):
                                         st.metric("Prog. Passes Received", safe_int(prog_recv))
 
-            # === HISTORY TABLES (Corrected use_container_width) ===
+            # === HISTORY TABLES ===
             is_goalkeeper = str(row.get('position', '')).strip().upper() in ['GK', 'GOALKEEPER', 'BRAMKARZ']
             
             # Combine competition stats with national team history from match logs
@@ -1160,12 +1161,12 @@ if not filtered_df.empty:
                                 'goals_against': 0,
                                 'save_percentage': _pd.NA,
                             })
-                        if rows:
-                            comp_display_df = _pd.DataFrame(rows)
-                            if gk_display.empty:
-                                gk_display = comp_display_df
-                            else:
-                                gk_display = _pd.concat([gk_display, comp_display_df], ignore_index=True)
+                    if not comp_display_df.empty:
+                        if gk_display.empty:
+                            gk_display = comp_display_df
+                        else:
+                            # Ensure both have same columns for clean concat
+                            gk_display = _pd.concat([gk_display, comp_display_df], ignore_index=True)
                             
                     season_display = gk_display
                 else:
@@ -1236,8 +1237,6 @@ if not filtered_df.empty:
                     # 3. Rename columns for display
                     # ... (renaming logic) ...
                     
-                    # --- CRITICAL FIX FOR STREAMLIT WARNING ---
-                    # REPLACE: use_container_width=True -> width="stretch"
                     # --- CLUB WORLD CUP LABELING (history table) ---
                     if 'competition_name' in season_display.columns:
                         cwc_mask = season_display['competition_name'].apply(is_club_world_cup)
@@ -1245,13 +1244,6 @@ if not filtered_df.empty:
                             season_display.loc[cwc_mask, 'season'] = season_display.loc[cwc_mask, 'season'].astype(str) + ' Club World Cup'
 
                     st.dataframe(season_display, width='stretch', hide_index=True)
-                    # NOTE: Streamlit's warning says "replace use_container_width with width".
-                    # However, in st.dataframe, use_container_width=True IS the correct way to stretch in current versions.
-                    # The warning likely refers to a chart or a deprecated usage.
-                    # If you still see the warning, try: st.dataframe(season_display, use_container_width=True) 
-                    # which is correct. The warning might come from st.image or other elements if present.
-                    # BUT based on your log, if it persists, use:
-                    # st.dataframe(season_display, width=1000) # Fixed width if stretch fails
                     
             
             # ===== NOWA SEKCJA: MECZE GRACZA =====

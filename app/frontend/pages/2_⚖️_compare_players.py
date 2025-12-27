@@ -358,9 +358,9 @@ if st.button("Compare Players"):
             bar_fig = create_bar_chart(comparison['player1'], comparison['player2'], selected_stats)
             
             if radar_fig:
-                st.plotly_chart(radar_fig, use_container_width=True)
+                st.plotly_chart(radar_fig, width='stretch')
             if bar_fig:
-                st.plotly_chart(bar_fig, use_container_width=True)
+                st.plotly_chart(bar_fig, width='stretch')
             
             # Display raw data in table with N/A formatting
             player1_values = []

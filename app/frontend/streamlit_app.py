@@ -456,8 +456,9 @@ if df.empty:
 teams = ['All'] + sorted(df['team'].dropna().unique().tolist())
 selected_team = st.sidebar.selectbox("Team", teams)
 
-players_list = ['All'] + [f"{row['name']} ({get_full_position(row.get('position'))})" for _, row in df.dropna(subset=['name']).iterrows()]
-players_list = sorted(list(set(players_list))) # Unique and sorted
+# Players list (sorted names first, then prepended with 'All')
+raw_players = [f"{row['name']} ({get_full_position(row.get('position'))})" for _, row in df.dropna(subset=['name']).iterrows()]
+players_list = ['All'] + sorted(list(set(raw_players)))
 selected_player_str = st.sidebar.selectbox("Player (optional)", players_list)
 
 # Apply filters
@@ -1564,9 +1565,12 @@ if not filtered_df.empty:
                             final_agg_rules = {k: v for k, v in agg_rules.items() if k in nt_df.columns}
 
                             # Grupujemy i łączymy
-                            if final_agg_rules:
+                            if final_agg_rules and not nt_df.empty:
                                 nt_agg = nt_df.groupby('season', as_index=False).agg(final_agg_rules)
-                                season_display = pd.concat([club_df, nt_agg], ignore_index=True)
+                                if club_df.empty:
+                                    season_display = nt_agg
+                                else:
+                                    season_display = pd.concat([club_df, nt_agg], ignore_index=True)
 
                     # 5. Formatowanie nazwy sezonu (np. 2025-2026 -> 2025/26)
                     def format_season(row):
