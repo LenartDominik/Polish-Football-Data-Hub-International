@@ -264,9 +264,6 @@ def load_data():
 
 # Sidebar - Search
 st.sidebar.header("🔎 Player Search")
-if st.sidebar.button("🔄 Refresh Data (Clear Cache)"):
-    st.cache_data.clear()
-    st.rerun()
 
 search_name = st.sidebar.text_input("Enter player name", placeholder="e.g. Lewandowski, Zieliński...")
 
