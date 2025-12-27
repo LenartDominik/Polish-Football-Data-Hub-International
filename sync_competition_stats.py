@@ -12,6 +12,7 @@ from app.backend.database import SessionLocal
 from app.backend.models.player import Player
 from app.backend.models.player_match import PlayerMatch
 from app.backend.models.competition_stats import CompetitionStats
+from app.backend.utils import get_competition_type
 from collections import defaultdict
 import logging
 
@@ -19,37 +20,6 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
-def get_competition_type(competition_name: str) -> str:
-    """Determine competition type from competition name"""
-    if not competition_name:
-        return "LEAGUE"
-    
-    comp_lower = competition_name.lower()
-    
-    # Domestic cups (CHECK FIRST - before European competitions)
-    if any(keyword in comp_lower for keyword in [
-        'copa del rey', 'copa', 'pokal', 'coupe', 'coppa',
-        'fa cup', 'league cup', 'efl', 'carabao',
-        'dfb-pokal', 'dfl-supercup', 'supercopa', 'supercoppa',
-        'u.s. open cup'
-    ]):
-        return "DOMESTIC_CUP"
-    
-    # European competitions
-    if any(keyword in comp_lower for keyword in [
-        'champions league', 'europa league', 'conference league', 
-        'uefa', 'champions lg', 'europa lg', 'conf lg', 'ucl', 'uel', 'uecl'
-    ]):
-        return "EUROPEAN_CUP"
-    
-    # National team
-    if any(keyword in comp_lower for keyword in [
-        'national team', 'reprezentacja', 'international'
-    ]):
-        return "NATIONAL_TEAM"
-    
-    # Default to league
-    return "LEAGUE"
 
 
 

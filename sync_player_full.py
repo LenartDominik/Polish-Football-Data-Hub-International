@@ -14,57 +14,17 @@ sys.path.append('.')
 
 from sqlalchemy import text
 from app.backend.database import SessionLocal
-from app.backend.models.player import Player
-from app.backend.models.player_match import PlayerMatch
-from app.backend.models.competition_stats import CompetitionStats
-from app.backend.models.goalkeeper_stats import GoalkeeperStats
 from app.backend.services.fbref_playwright_scraper import FBrefPlaywrightScraper
+from app.backend.utils import get_competition_type
+from app.backend.models import Player, PlayerMatch, CompetitionStats, GoalkeeperStats
 
 # --- Ujednolicone mapowanie competition_type ---
-def get_competition_type(competition_name: str) -> str:
-    """Mapuje nazwę rozgrywek na jeden z typów: LEAGUE, DOMESTIC_CUP, EUROPEAN_CUP, NATIONAL_TEAM"""
-    if not competition_name:
-        return "LEAGUE"
-    comp_lower = competition_name.lower()
-    # Domestic cups (najpierw, zanim europejskie)
-    if any(keyword in comp_lower for keyword in [
-        'copa del rey', 'copa', 'pokal', 'coupe', 'coppa',
-        'fa cup', 'league cup', 'efl', 'carabao',
-        'dfb-pokal', 'dfl-supercup', 'supercopa', 'supercoppa',
-        'u.s. open cup', 'puchar', 'krajowy puchar'
-    ]):
-        return "DOMESTIC_CUP"
-    # European competitions
-    if any(keyword in comp_lower for keyword in [
-        'champions league', 'europa league', 'conference league',
-        'uefa', 'champions lg', 'europa lg', 'conf lg', 'ucl', 'uel', 'uecl'
-    ]):
-        return "EUROPEAN_CUP"
-    # National team
-    if any(keyword in comp_lower for keyword in [
-        'national team', 'reprezentacja', 'international'
-    ]):
-        return "NATIONAL_TEAM"
-    # Default league
-    return "LEAGUE"
 
 
 def normalize_competition_type(raw_type: str, competition_name: str = "") -> str:
-    """Normalizuje competition_type do jednego z dozwolonych: LEAGUE, DOMESTIC_CUP, EUROPEAN_CUP, NATIONAL_TEAM"""
-    if raw_type is None:
-        return get_competition_type(competition_name)
-    t = str(raw_type).strip().upper()
-    mapping = {
-        'LEAGUE': 'LEAGUE',
-        'DOMESTIC_CUP': 'DOMESTIC_CUP',
-        'EUROPEAN_CUP': 'EUROPEAN_CUP',
-        'NATIONAL_TEAM': 'NATIONAL_TEAM',
-        'CUP': 'DOMESTIC_CUP',
-        'INTERNATIONAL_CUP': 'EUROPEAN_CUP',
-    }
-    if t in mapping:
-        return mapping[t]
-    # Fallback na podstawie nazwy rozgrywek
+    """Normalizuje competition_type do jednego z dozwolonych: LEAGUE, DOMESTIC_CUP, EUROPEAN_CUP, NATIONAL_TEAM.
+    Zignoruj raw_type i użyj get_competition_type dla pełnej spójności.
+    """
     return get_competition_type(competition_name)
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
@@ -690,10 +650,7 @@ async def sync_match_logs_for_season(scraper: FBrefPlaywrightScraper, player_inf
     # --- FAZA 2: BAZA ---
     db = SessionLocal()
     try:
-        year_start = int(season.split('-')[0])
-        year_end = year_start + 1
-        season_start = date(year_start, 7, 1)
-        season_end = date(year_end, 6, 30)
+        season_start, season_end = get_season_date_range(season)
         
         db.query(PlayerMatch).filter(PlayerMatch.player_id == player_id, PlayerMatch.match_date >= season_start, PlayerMatch.match_date <= season_end).delete(synchronize_session=False)
         

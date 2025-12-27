@@ -32,7 +32,7 @@ jobs:
       # Ustawiamy zmienne środowiskowe, aby testy nie próbowały łączyć się z prawdziwą bazą
       # W przyszłości warto dodać mockowanie bazy danych
       env:
-        DATABASE_URL: "sqlite:///./test.db"
+        DATABASE_URL: "sqlite://"
         SMTP_HOST: "localhost"
         SMTP_PORT: "587"
       run: |

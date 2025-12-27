@@ -686,10 +686,11 @@ if not filtered_df.empty:
                     else:
                         st.write("No details available.")
 
-            # --- KOLUMNA 2: EUROPEAN CUPS ---
+            # --- KOLUMNA 2: EUROPEAN / INTERNATIONAL CUPS ---
             with col2:
                 with st.container(height=STATS_HEIGHT, border=False):
-                    st.write("### 🌍 European Cups (2025-2026)")
+                    cups_header = "### 🌍 International Cups (2025-2026)" if row.get('league') == 'MLS' else "### 🌍 European Cups (2025-2026)"
+                    st.write(cups_header)
                     
                     found_euro = False
                     if is_gk and not gk_stats.empty:
@@ -698,6 +699,7 @@ if not filtered_df.empty:
                         # Exclude Club World Cup from European Cups
                         if not euro_stats.empty:
                             euro_stats = euro_stats[~euro_stats['competition_name'].apply(is_club_world_cup)]
+                            euro_stats = euro_stats[~euro_stats['competition_name'].str.contains('Leagues Cup', case=False, na=False)]
                         if not euro_stats.empty:
                             found_euro = True
                             for _, gk_row in euro_stats.iterrows():
@@ -714,6 +716,7 @@ if not filtered_df.empty:
                         # Exclude Club World Cup from European Cups
                         if not euro_stats.empty:
                             euro_stats = euro_stats[~euro_stats['competition_name'].apply(is_club_world_cup)]
+                            euro_stats = euro_stats[~euro_stats['competition_name'].str.contains('Leagues Cup', case=False, na=False)]
                         if not euro_stats.empty:
                             found_euro = True
                             for _, comp_row in euro_stats.iterrows():
@@ -741,6 +744,7 @@ if not filtered_df.empty:
                         # Exclude Club World Cup from European Cups
                         if not euro_stats.empty:
                             euro_stats = euro_stats[~euro_stats['competition_name'].apply(is_club_world_cup)]
+                            euro_stats = euro_stats[~euro_stats['competition_name'].str.contains('Leagues Cup', case=False, na=False)]
                         if not euro_stats.empty:
                             euro_stats_to_show = euro_stats
                             is_gk_display = True
@@ -752,6 +756,7 @@ if not filtered_df.empty:
                         # Exclude Club World Cup from European Cups
                         if not euro_stats.empty:
                             euro_stats = euro_stats[~euro_stats['competition_name'].apply(is_club_world_cup)]
+                            euro_stats = euro_stats[~euro_stats['competition_name'].str.contains('Leagues Cup', case=False, na=False)]
                         if not euro_stats.empty:
                             euro_stats_to_show = euro_stats
                             is_gk_display = is_gk
@@ -1134,95 +1139,70 @@ if not filtered_df.empty:
             with (col6 if has_cwc and col6 is not None else col5):
                 # GÓRA: Statystyki w sztywnym pudełku
                 with st.container(height=STATS_HEIGHT, border=False):
+                    is_mls = row.get('league') == 'MLS'
                     st.write("### 🏆 Season Total (2025-2026)")
-                    # Season Total = club competitions only (no National Team, no Super Cups)
-                    st.caption("Club competitions only (League + Domestic Cups + European Cups). Excludes Club World Cup, National Team, and Super Cups.")
-                    # Always exclude national team matches and Super Cups from Season Total
-                    include_nt_in_season_total = False
+                    
+                    if is_mls:
+                        caption = "Club competitions only (League + Domestic Cups + International Cups). Excludes National Team and Super Cups."
+                    else:
+                        caption = "Club competitions only (League + Domestic Cups + European Cups). Excludes Club World Cup, National Team, and Super Cups."
+                    st.caption(caption)
 
-                    # Inicjalizacja wszystkich sum
+                    # --- SUMMATION LOGIC FROM COMP_STATS (FOR CONSISTENCY) ---
                     total_games, total_starts, total_minutes = 0, 0, 0
                     total_goals, total_assists, total_xg, total_xa = 0, 0, 0.0, 0.0
-                    total_shots, total_sot, total_yellow, total_red = 0, 0, 0, 0
-                    
-                    # Tylko dla GK
                     total_clean_sheets, total_ga, total_saves, total_sota = 0, 0, 0, 0
-
-                    # KROK 1: Jeśli to bramkarz, sumuj dane z goalkeeper_stats (PRIORYTET)
-                    # Season Total 2025/26 = mecze klubowe w przedziale dat 2025-07-01 .. 2026-06-30.
-                    # Źródło prawdy dla granicy sezonu (lipiec/czerwiec): player_matches.
-                    # Reprezentacja NIE wchodzi do "Season Total" sezonu klubowego.
-                    season_start = '2025-07-01'
-                    season_end = '2026-06-30'
-                    # Exclusions for Season Total:
-                    # - National Team competitions
-                    # - Super Cups / Supercopa / Supercoppa / UEFA Super Cup etc.
-                    national_competitions = [
-                        'WCQ',
-                        'Friendlies (M)',
-                        'UEFA Nations League',
-                        'UEFA Euro',
-                        'World Cup',
-                        'UEFA Euro Qualifying',
-                        'World Cup Qualifying',
-                    ]
+                    
+                    # Filtering for club season
+                    current_season_filters = ['2025-2026', '2025/2026', '2025', 2025]
                     super_cup_keywords = [
-                        'super cup',
-                        'uefa super cup',
-                        'supercopa',
-                        'supercoppa',
-                        'superpuchar',
-                        'community shield',
-                        'supercup',
-                        'dfl-supercup',
-                        'supertaca',
-                        'supertaça',
-                        'trophée des champions',
-                        'trofeo de campeones',
+                        'super cup', 'uefa super cup', 'supercopa', 'supercoppa', 'superpuchar',
+                        'community shield', 'supercup', 'dfl-supercup', 'supertaca', 'supertaça',
+                        'trophée des champions', 'trofeo de campeones'
                     ]
 
-                    pm_total = get_season_total_stats_by_date_range(
-                        player_id=row['id'],
-                        start_date=season_start,
-                        end_date=season_end,
-                        matches_df=matches_df,
-                        exclude_competitions=national_competitions,
-                        exclude_competition_keywords=super_cup_keywords,
-                    )
-
-                    if pm_total:
-                        total_games = pm_total['games']
-                        total_starts = pm_total['starts']
-                        total_minutes = pm_total['minutes']
-                        total_goals = pm_total['goals']
-                        total_assists = pm_total['assists']
-                        total_xg = pm_total['xg']
-                        total_xa = pm_total['xa']
-                        total_shots = pm_total['shots']
-                        total_sot = pm_total['shots_on_target']
-
-                    # Dla bramkarzy: metryki GK (CS/GA/Saves/SoTA) bierzemy z goalkeeper_stats dla sezonu klubowego 2025/26.
-                    if is_gk and not gk_stats.empty:
-                        club_filters = ['2025-2026', '2025/2026']
-                        gk_club = gk_stats[(gk_stats['season'].isin(club_filters)) & (gk_stats['competition_type'] != 'NATIONAL_TEAM')].copy()
-                        # Exclude Super Cups from Season Total
-                        if not gk_club.empty and 'competition_name' in gk_club.columns:
-                            sc_mask = pd.Series(False, index=gk_club.index)
+                    # 1. Outfield stats
+                    if not comp_stats.empty:
+                        # Filter for season
+                        club_total_df = comp_stats[comp_stats['season'].isin(current_season_filters)].copy()
+                        # Exclude National Team
+                        club_total_df = club_total_df[club_total_df['competition_type'] != 'NATIONAL_TEAM']
+                        # Exclude Super Cups
+                        if not club_total_df.empty and 'competition_name' in club_total_df.columns:
+                            sc_mask = pd.Series(False, index=club_total_df.index)
                             for kw in super_cup_keywords:
-                                sc_mask = sc_mask | gk_club['competition_name'].astype(str).str.contains(kw, case=False, na=False)
-                            gk_club = gk_club[~sc_mask]
-                        # Club World Cup jako klubowe – może być zapisane "rokiem" zamiast sezonem
-                        if 'competition_name' in gk_stats.columns:
-                            gk_cwc = gk_stats[(gk_stats['competition_type'] != 'NATIONAL_TEAM') &
-                                              (gk_stats['competition_name'].astype(str).str.contains('Club World Cup', case=False, na=False))]
-                        else:
-                            gk_cwc = pd.DataFrame()
-                        gk_total = pd.concat([gk_club, gk_cwc], ignore_index=True) if (not gk_club.empty or not gk_cwc.empty) else pd.DataFrame()
-                        if not gk_total.empty:
-                            total_clean_sheets = safe_int(gk_total['clean_sheets'].sum())
-                            total_ga = safe_int(gk_total['goals_against'].sum())
-                            total_saves = safe_int(gk_total['saves'].sum())
-                            total_sota = safe_int(gk_total['shots_on_target_against'].sum())
+                                sc_mask = sc_mask | club_total_df['competition_name'].astype(str).str.contains(kw, case=False, na=False)
+                            club_total_df = club_total_df[~sc_mask]
+                        
+                        if not club_total_df.empty:
+                            total_games = int(club_total_df['games'].sum())
+                            total_starts = int(club_total_df['games_starts'].sum())
+                            total_minutes = int(club_total_df['minutes'].sum())
+                            total_goals = int(club_total_df['goals'].sum())
+                            total_assists = int(club_total_df['assists'].sum())
+                            total_xg = float(club_total_df['xg'].sum())
+                            total_xa = float(club_total_df['xa'].sum())
+
+                    # 2. Goalkeeper stats
+                    if is_gk and not gk_stats.empty:
+                        gk_club_total = gk_stats[gk_stats['season'].isin(current_season_filters)].copy()
+                        gk_club_total = gk_club_total[gk_club_total['competition_type'] != 'NATIONAL_TEAM']
+                        if not gk_club_total.empty and 'competition_name' in gk_club_total.columns:
+                            sc_mask = pd.Series(False, index=gk_club_total.index)
+                            for kw in super_cup_keywords:
+                                sc_mask = sc_mask | gk_club_total['competition_name'].astype(str).str.contains(kw, case=False, na=False)
+                            gk_club_total = gk_club_total[~sc_mask]
+                        
+                        if not gk_club_total.empty:
+                            total_clean_sheets = int(gk_club_total['clean_sheets'].sum())
+                            total_ga = int(gk_club_total['goals_against'].sum())
+                            total_saves = int(gk_club_total['saves'].sum())
+                            total_sota = int(gk_club_total['shots_on_target_against'].sum())
+                            # If outfield stats were empty, use GK minutes/starts
+                            if total_minutes == 0:
+                                total_games = int(gk_club_total['games'].sum())
+                                total_starts = int(gk_club_total['games_starts'].sum())
+                                total_minutes = int(gk_club_total['minutes'].sum())
 
                     # KROK 3: Wyświetl metryki na bazie zagregowanych danych
                     m1, m2, m3 = st.columns(3)
@@ -1254,7 +1234,7 @@ if not filtered_df.empty:
                         
                         # Calculate penalty_goals from comp_stats (club comps only, exclude Super Cups)
                         if not comp_stats.empty:
-                            club_season_filters = ['2025-2026', '2025/2026']
+                            club_season_filters = ['2025-2026', '2025/2026', '2025', 2025]
                             comp_stats_2526 = comp_stats[comp_stats['season'].isin(club_season_filters)].copy()
                             if not comp_stats_2526.empty:
                                 # Exclude National Team
@@ -1495,8 +1475,31 @@ if not filtered_df.empty:
                 else:
                     season_display = pd.DataFrame()
 
+                # --- FIX: DATA CLEANING FOR DATAFRAME ---
                 # 3. Główna logika przetwarzania (jeśli są dane)
                 if not season_display.empty:
+                    # Dynamic mapping for competition types based on league
+                    if row.get('league') == 'MLS':
+                        type_mapping = {
+                            'LEAGUE': 'League',
+                            'EUROPEAN_CUP': 'International Cup',
+                            'DOMESTIC_CUP': 'Domestic Cup',
+                            'NATIONAL_TEAM': 'National Team'
+                        }
+                    else:
+                        type_mapping = {
+                            'LEAGUE': 'League',
+                            'EUROPEAN_CUP': 'European Cup',
+                            'DOMESTIC_CUP': 'Domestic Cup',
+                            'NATIONAL_TEAM': 'National Team'
+                        }
+                    
+                    if 'competition_type' in season_display.columns:
+                        season_display['competition_type'] = season_display['competition_type'].map(type_mapping).fillna(season_display['competition_type'])
+                        # Specific override for Leagues Cup to be Domestic Cup
+                        if 'competition_name' in season_display.columns:
+                            is_leagues_cup = season_display['competition_name'].str.contains('Leagues Cup', case=False, na=False)
+                            season_display.loc[is_leagues_cup, 'competition_type'] = 'Domestic Cup'
                     # Usuwanie błędnych wierszy DFB Pokal oznaczonych jako LEAGUE
                     if 'competition_name' in season_display.columns:
                         mask_bad_row = (

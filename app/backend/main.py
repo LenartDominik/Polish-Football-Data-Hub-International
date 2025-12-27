@@ -26,6 +26,7 @@ from .models.player import Player
 from .models.competition_stats import CompetitionStats, CompetitionType
 from .models.goalkeeper_stats import GoalkeeperStats
 from .models.player_match import PlayerMatch
+from .utils import get_competition_type
 
 
 logger = logging.getLogger(__name__)
@@ -43,40 +44,6 @@ Base.metadata.create_all(bind=engine)
 scheduler = None
 
 
-def get_competition_type(competition_name: str) -> str:
-    """Determine competition type from competition name"""
-    if not competition_name:
-        return "LEAGUE"
-    
-    comp_lower = competition_name.lower()
-    
-    # National team (CHECK FIRST - before UEFA competitions)
-    # This prevents international matches from being classified as European cups
-    if any(keyword in comp_lower for keyword in [
-        'national team', 'reprezentacja', 'international',
-        'friendlies', 'wcq', 'world cup', 'uefa euro', 'copa america'
-    ]):
-        return "NATIONAL_TEAM"
-    
-    # Domestic cups (CHECK SECOND - before European competitions)
-    # This prevents domestic cups from being classified as European competitions
-    if any(keyword in comp_lower for keyword in [
-        'copa del rey', 'copa', 'pokal', 'coupe', 'coppa',
-        'fa cup', 'league cup', 'efl', 'carabao',
-        'dfb-pokal', 'dfl-supercup', 'supercoca', 'supercoppa',
-        'u.s. open cup'
-    ]):
-        return "DOMESTIC_CUP"
-    
-    # European club competitions
-    if any(keyword in comp_lower for keyword in [
-        'champions league', 'europa league', 'conference league', 
-        'uefa', 'champions lg', 'europa lg', 'conf lg', 'ucl', 'uel', 'uecl'
-    ]):
-        return "EUROPEAN_CUP"
-    
-    # Default to league
-    return "LEAGUE"
 
 
 def save_competition_stats(db, player: Player, stats_list: List[dict], current_season: str = "2025-2026") -> int:
