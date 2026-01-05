@@ -99,6 +99,62 @@ def calculate_per_90(value, minutes):
     return 0.0
 
 
+def clean_national_team_stats(df):
+    """
+    Deduplicate National Team statistics.
+    If a season has both summary rows ('National Team', 'Reprezentacja', 'National Team (All)')
+    and detailed rows ('WCQ', 'UEFA Euro', 'Friendlies', etc.), keep only the detailed rows.
+    """
+    if df is None or df.empty:
+        return df
+    
+    # Standardize names for comparison
+    def is_summary(name):
+        n = str(name).lower().strip()
+        # Checks if name starts with summary keywords or matches specific labels
+        summary_keywords = ['national team', 'reprezentacja', 'national team (all)']
+        return any(n.startswith(kw) for kw in summary_keywords)
+    
+    # Group by season to check for duplicates
+    # Use str(season) to handle mixed types
+    df_copy = df.copy()
+    df_copy['temp_s'] = df_copy['season'].astype(str)
+    
+    groups = []
+    # Identify seasons with multiple rows where at least one is a summary
+    for _, group in df_copy.groupby('temp_s'):
+        if len(group) <= 1:
+            groups.append(group)
+            continue
+            
+        # Check if we have both summary and details
+        # Detailed rows have specific keywords AND are not just summary names
+        has_details = group['competition_name'].apply(
+            lambda x: any(k.lower() in str(x).lower() for k in ['wcq', 'qualif', 'euro', 'world cup', 'friendly', 'eliminacje', 'league'])
+            and not is_summary(x)
+        ).any()
+        
+        if has_details:
+            # Drop the generic summary rows for this season
+            detailed_group = group[~group['competition_name'].apply(is_summary)]
+            # If after filtering we still have something, use it. 
+            # If we somehow dropped everything (shouldn't happen), keep original.
+            if not detailed_group.empty:
+                groups.append(detailed_group)
+            else:
+                groups.append(group)
+        else:
+            groups.append(group)
+            
+    if not groups:
+        return df.drop(columns=['temp_s'], errors='ignore')
+        
+    result = pd.concat(groups, ignore_index=True)
+    if 'temp_s' in result.columns:
+        result = result.drop(columns=['temp_s'])
+    return result
+
+
 # Helper function to calculate xGI
 def calculate_xgi(xg, xa):
     """Calculate xGI (xG + xAG)"""
@@ -852,6 +908,8 @@ if not filtered_df.empty:
                     if not is_gk and not comp_stats.empty:
                         comp_stats_2025 = comp_stats[comp_stats['season'].isin(['2025-2026', '2025/2026', '2026', 2026, '2025', 2025])]
                         national_stats = comp_stats_2025[comp_stats_2025['competition_type'] == 'NATIONAL_TEAM']
+                        # Clean/Deduplicate
+                        national_stats = clean_national_team_stats(national_stats)
                         
                         if not national_stats.empty:
                             national_data_found = True
@@ -882,6 +940,8 @@ if not filtered_df.empty:
                     elif is_gk and not gk_stats.empty:
                         gk_stats_2025 = gk_stats[gk_stats['season'].isin(['2025-2026', '2025/2026', '2026', 2026, '2025', 2025])]
                         national_stats = gk_stats_2025[gk_stats_2025['competition_type'] == 'NATIONAL_TEAM']
+                        # Clean/Deduplicate
+                        national_stats = clean_national_team_stats(national_stats)
                         
                         if not national_stats.empty:
                             national_data_found = True
@@ -1142,8 +1202,40 @@ if not filtered_df.empty:
                     if not comp_stats.empty:
                         comp_subset = comp_stats[comp_stats['competition_type'].isin(comp_needed)].copy()
                         rows = []
+
+                        # Klucze istniejące już w gk_display (żeby nie dodawać duplikatów z comp_stats)
+                        gk_keys = set()
+                        # Dodatkowy set dla sezonów, w których już są dane reprezentacyjne (żeby uniknąć dubli typu WCQ vs National Team)
+                        gk_nt_seasons = set()
+                        
+                        if not gk_display.empty and 'season' in gk_display.columns and 'competition_type' in gk_display.columns:
+                            # Tworzymy unikalne klucze dla istniejących wierszy
+                            for _, r in gk_display.iterrows():
+                                s = str(r['season'])
+                                ct = str(r['competition_type'])
+                                cn = str(r.get('competition_name', ''))
+                                gk_keys.add((s, ct, cn))
+                                
+                                # Jeśli to wiersz reprezentacyjny, zapamiętaj sezon
+                                if ct == 'NATIONAL_TEAM' or 'National Team' in cn or 'Reprezentacja' in cn or 'WCQ' in cn or 'Euro' in cn:
+                                    gk_nt_seasons.add(s)
+
                         for _, r in comp_subset.iterrows():
-                            # Simplified check
+                            s = str(r['season'])
+                            ct = str(r['competition_type'])
+                            cn = str(r.get('competition_name', ''))
+                            
+                            # Check if exists (exact match)
+                            key = (s, ct, cn)
+                            if key in gk_keys:
+                                continue
+                            
+                            # Check if exists (loose NT match)
+                            # Jeśli dodajemy wiersz reprezentacyjny, sprawdź czy dla tego sezonu już coś mamy w gk_nt_seasons
+                            is_nt_row = (ct == 'NATIONAL_TEAM' or 'National Team' in cn or 'Reprezentacja' in cn or 'WCQ' in cn)
+                            if is_nt_row and s in gk_nt_seasons:
+                                continue
+                                
                             rows.append({
                                 'season': r['season'],
                                 'competition_type': r['competition_type'],
@@ -1164,6 +1256,87 @@ if not filtered_df.empty:
                                 if not comp_display_df.empty:
                                     gk_display = _pd.concat([gk_display, comp_display_df], ignore_index=True)
                             
+                            # --- AGGREGATION: GROUP NATIONAL TEAM STATS FOR GK ---
+                            # Logic: Filter NT rows and group by season (normalizing WCQ 2026 -> 2025)
+                            if not gk_display.empty:
+                                ntm = (gk_display['competition_type'] == 'NATIONAL_TEAM') | \
+                                      (gk_display['competition_name'].fillna('').astype(str).str.contains(r'\bWorld Cup\b|UEFA Euro|\bEuro Qualifying\b|Nations League|Reprezentacja|Eliminacje', case=False)) | \
+                                      (gk_display['competition_name'].apply(lambda x: str(x) in ['WCQ', 'Friendlies (M)', 'World Cup Qualifying', 'UEFA Euro Qualifying', 'National Team', 'National Team (All)']))
+                                
+                                if ntm.any():
+                                    nt_df = gk_display[ntm].copy()
+                                    club_df = gk_display[~ntm].copy()
+                                    
+                                    # Normalize seasons for NT (specifically WCQ 2026 -> 2025 if present)
+                                    # General rule: use calendar year or main season part
+                                    def normalize_nt_season(row):
+                                        s = str(row['season'])
+                                        c = str(row['competition_name'])
+                                        # Specific fix for WCQ 2026 appearing in 2025 context
+                                        if '2026' in s and ('WCQ' in c or 'Qualifying' in c):
+                                            return '2025'
+                                        
+                                        # Generic normalization: "2024-2025" -> "2024" for NT typically matches start year?
+                                        # OR just returning the raw season if it's already "2024"
+                                        # Let's try to extract the first 4 digits if it looks like a range, 
+                                        # but ONLY for National Team contexts where we want single-year grouping.
+                                        # Many NT stats come as '2024', but some might be '2024-2025' (Nations League).
+                                        # If it's Nations League 2024-25, we usually want it in 2024 (group stage).
+                                        if '-' in s:
+                                            return s.split('-')[0]
+                                        if '/' in s:
+                                            return s.split('/')[0]
+                                            
+                                        return s
+
+                            nt_df['season_group'] = nt_df.apply(normalize_nt_season, axis=1)
+                            
+                            # --- FIX DOUBLE COUNTING ---
+                            # Before aggregating, check if we have both SUMMARY rows (e.g. "National Team") 
+                            # and DETAILED rows (e.g. "WCQ") for the same season group.
+                            # Use shared helper (renaming season for compatibility)
+                            nt_df = nt_df.rename(columns={'season': 'original_season', 'season_group': 'season'})
+                            nt_df = clean_national_team_stats(nt_df)
+                            nt_df = nt_df.rename(columns={'season': 'season_group', 'original_season': 'season'})
+                            # ---------------------------
+                            
+                                    # Group and Aggregate
+                                    agg_funcs = {
+                                        'games': 'sum',
+                                        'games_starts': 'sum',
+                                        'minutes': 'sum',
+                                        'clean_sheets': 'sum',
+                                        'goals_against': 'sum',
+                                        'saves': 'sum',
+                                        'shots_on_target_against': 'sum'
+                                    }
+                                    # Keep columns that exist in DataFrame
+                                    available_funcs = {k: v for k,v in agg_funcs.items() if k in nt_df.columns}
+                                    
+                                    nt_grouped = nt_df.groupby('season_group').agg(available_funcs).reset_index()
+                                    nt_grouped = nt_grouped.rename(columns={'season_group': 'season'})
+                                    nt_grouped['competition_type'] = 'NATIONAL_TEAM'
+                                    nt_grouped['competition_name'] = 'National Team'
+                                    
+                                    # Recalculate Save %
+                                    if 'saves' in nt_grouped.columns and 'shots_on_target_against' in nt_grouped.columns:
+                                        nt_grouped['save_percentage'] = nt_grouped.apply(
+                                            lambda x: (x['saves'] / x['shots_on_target_against'] * 100) if x['shots_on_target_against'] > 0 else 0.0, 
+                                            axis=1
+                                        )
+                                    
+                                    # Recombine with Club stats
+                                    gk_display = _pd.concat([club_df, nt_grouped], ignore_index=True)
+                                    
+                                    # Filter out potential summary rows (Season 'All', 'Career' etc.)
+                                    # We expect seasons to be years or ranges (2024, 2024-25). 
+                                    # Simple heuristic: season must contain a digit.
+                                    gk_display = gk_display[gk_display['season'].astype(str).str.contains(r'\d', regex=True)]
+                                    
+                                    # Sort by season descending roughly
+                                    gk_display = gk_display.sort_values(by='season', ascending=False)
+                            # -----------------------------------------------------
+
                     season_display = gk_display
                 else:
                     season_display = comp_stats[['season', 'competition_type', 'competition_name', 'games', 'goals', 'assists', 'xg', 'xa', 'yellow_cards', 'red_cards', 'minutes']].copy()
