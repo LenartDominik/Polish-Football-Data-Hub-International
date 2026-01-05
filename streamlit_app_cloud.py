@@ -1341,41 +1341,41 @@ if not filtered_df.empty:
                             nt_df = nt_df.rename(columns={'season': 'season_group', 'original_season': 'season'})
                             # ---------------------------
                             
-                                    # Group and Aggregate
-                                    agg_funcs = {
-                                        'games': 'sum',
-                                        'games_starts': 'sum',
-                                        'minutes': 'sum',
-                                        'clean_sheets': 'sum',
-                                        'goals_against': 'sum',
-                                        'saves': 'sum',
-                                        'shots_on_target_against': 'sum'
-                                    }
-                                    # Keep columns that exist in DataFrame
-                                    available_funcs = {k: v for k,v in agg_funcs.items() if k in nt_df.columns}
+                            # Group and Aggregate
+                            agg_funcs = {
+                                'games': 'sum',
+                                'games_starts': 'sum',
+                                'minutes': 'sum',
+                                'clean_sheets': 'sum',
+                                'goals_against': 'sum',
+                                'saves': 'sum',
+                                'shots_on_target_against': 'sum'
+                            }
+                            # Keep columns that exist in DataFrame
+                            available_funcs = {k: v for k,v in agg_funcs.items() if k in nt_df.columns}
+                            
+                            nt_grouped = nt_df.groupby('season_group').agg(available_funcs).reset_index()
+                            nt_grouped = nt_grouped.rename(columns={'season_group': 'season'})
+                            nt_grouped['competition_type'] = 'NATIONAL_TEAM'
+                            nt_grouped['competition_name'] = 'National Team'
+                            
+                            # Recalculate Save %
+                            if 'saves' in nt_grouped.columns and 'shots_on_target_against' in nt_grouped.columns:
+                                nt_grouped['save_percentage'] = nt_grouped.apply(
+                                    lambda x: (x['saves'] / x['shots_on_target_against'] * 100) if x['shots_on_target_against'] > 0 else 0.0, 
+                                    axis=1
+                                )
+                            
+                            # Recombine with Club stats
+                            gk_display = _pd.concat([club_df, nt_grouped], ignore_index=True)
                                     
-                                    nt_grouped = nt_df.groupby('season_group').agg(available_funcs).reset_index()
-                                    nt_grouped = nt_grouped.rename(columns={'season_group': 'season'})
-                                    nt_grouped['competition_type'] = 'NATIONAL_TEAM'
-                                    nt_grouped['competition_name'] = 'National Team'
-                                    
-                                    # Recalculate Save %
-                                    if 'saves' in nt_grouped.columns and 'shots_on_target_against' in nt_grouped.columns:
-                                        nt_grouped['save_percentage'] = nt_grouped.apply(
-                                            lambda x: (x['saves'] / x['shots_on_target_against'] * 100) if x['shots_on_target_against'] > 0 else 0.0, 
-                                            axis=1
-                                        )
-                                    
-                                    # Recombine with Club stats
-                                    gk_display = _pd.concat([club_df, nt_grouped], ignore_index=True)
-                                    
-                                    # Filter out potential summary rows (Season 'All', 'Career' etc.)
-                                    # We expect seasons to be years or ranges (2024, 2024-25). 
-                                    # Simple heuristic: season must contain a digit.
-                                    gk_display = gk_display[gk_display['season'].astype(str).str.contains(r'\d', regex=True)]
-                                    
-                                    # Sort by season descending roughly
-                                    gk_display = gk_display.sort_values(by='season', ascending=False)
+                            # Filter out potential summary rows (Season 'All', 'Career' etc.)
+                            # We expect seasons to be years or ranges (2024, 2024-25). 
+                            # Simple heuristic: season must contain a digit.
+                            gk_display = gk_display[gk_display['season'].astype(str).str.contains(r'\d', regex=True)]
+                            
+                            # Sort by season descending roughly
+                            gk_display = gk_display.sort_values(by='season', ascending=False)
                             # -----------------------------------------------------
 
                     season_display = gk_display
