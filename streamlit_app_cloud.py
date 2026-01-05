@@ -1161,7 +1161,8 @@ if not filtered_df.empty:
                                 gk_display = comp_display_df
                             else:
                                 # Ensure both have same columns for clean concat
-                                gk_display = _pd.concat([gk_display, comp_display_df], ignore_index=True)
+                                if not comp_display_df.empty:
+                                    gk_display = _pd.concat([gk_display, comp_display_df], ignore_index=True)
                             
                     season_display = gk_display
                 else:
