@@ -272,36 +272,80 @@ def clean_national_team_stats(df):
         summary_keywords = ['national team', 'reprezentacja', 'national team (all)']
         return any(n.startswith(kw) for kw in summary_keywords)
     
-    # Group by season to check for duplicates
-    # Use str(season) to handle mixed types
+    # Group by normalized season to check for duplicates
     df_copy = df.copy()
-    df_copy['temp_s'] = df_copy['season'].astype(str)
     
+    # Internal normalization for grouping
+    def get_norm_s(row):
+        s = str(row.get('season', ''))
+        c = str(row.get('competition_name', '')).lower()
+        # Map WCQ 2026 to 2025 for grouping
+        if '2026' in s and ('wcq' in c or 'qualify' in c or 'eliminacje' in c):
+            return '2025'
+        if '-' in s: return s.split('-')[0]
+        if '/' in s: return s.split('/')[0]
+        return s
+
+    df_copy['temp_s'] = df_copy.apply(get_norm_s, axis=1)
+    
+    # Define priorities
+    def get_priority(name):
+        n = str(name).lower()
+        if any(k in n for k in ['wcq', 'world cup', 'euro', 'nations league', 'eliminacje']): return 3 # Specific
+        if 'friendly' in n: return 2 # General
+        if is_summary(name): return 1 # Summary
+        return 0
+
     groups = []
-    # Identify seasons with multiple rows where at least one is a summary
+    # Process each normalized season group
     for _, group in df_copy.groupby('temp_s'):
         if len(group) <= 1:
             groups.append(group)
             continue
             
-        # Check if we have both summary and details
-        # Detailed rows have specific keywords AND are not just summary names
-        has_details = group['competition_name'].apply(
-            lambda x: any(k.lower() in str(x).lower() for k in ['wcq', 'qualif', 'euro', 'world cup', 'friendly', 'eliminacje', 'league'])
-            and not is_summary(x)
-        ).any()
+        group = group.copy()
+        # 1. Drop obvious summaries if we have anything else
+        has_any_details = group['competition_name'].apply(lambda x: get_priority(x) > 1).any()
+        if has_any_details:
+            group = group[~group['competition_name'].apply(is_summary)]
         
-        if has_details:
-            # Drop the generic summary rows for this season
-            detailed_group = group[~group['competition_name'].apply(is_summary)]
-            # If after filtering we still have something, use it. 
-            # If we somehow dropped everything (shouldn't happen), keep original.
-            if not detailed_group.empty:
-                groups.append(detailed_group)
-            else:
-                groups.append(group)
-        else:
+        if len(group) <= 1:
             groups.append(group)
+            continue
+
+        # 2. Smart Overlap Detection:
+        # If "Friendlies (M)" (Priority 2) contains matches also listed in Priority 3 (WCQ/Euro), 
+        # it will have >= games and minutes than Priority 3.
+        specifics = group[group['competition_name'].apply(lambda x: get_priority(x) == 3)]
+        generals = group[group['competition_name'].apply(lambda x: get_priority(x) == 2)]
+        
+        if not specifics.empty and not generals.empty:
+            spec_games = specifics['games'].sum()
+            spec_mins = specifics['minutes'].sum()
+            
+            # Check each 'General/Friendly' row for overlap
+            new_generals = []
+            for _, gen_row in generals.iterrows():
+                # If specific row matches exactly or is a subset of this general row, 
+                # subtract specific from general to see what's left.
+                if gen_row['games'] >= spec_games and gen_row['minutes'] >= spec_mins:
+                    rem_games = gen_row['games'] - spec_games
+                    rem_mins = gen_row['minutes'] - spec_mins
+                    
+                    if rem_games > 0:
+                        gen_row = gen_row.copy()
+                        gen_row['games'] = rem_games
+                        gen_row['minutes'] = rem_mins
+                        # Keep other stats proportional if necessary, but usually friendlies 0 mins etc.
+                        new_generals.append(pd.DataFrame([gen_row]))
+                    # If rem_games == 0, this whole General row was just a container for the Specifics. DROP.
+                else:
+                    new_generals.append(pd.DataFrame([gen_row]))
+            
+            # Reconstruct group
+            group = pd.concat([specifics] + new_generals, ignore_index=True)
+            
+        groups.append(group)
             
     if not groups:
         return df.drop(columns=['temp_s'], errors='ignore')
