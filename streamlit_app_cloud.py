@@ -183,14 +183,54 @@ def clean_national_team_stats(df):
                     new_generals.append(pd.DataFrame([gen_row]))
             
             # Reconstruct group
-            group = pd.concat([specifics] + new_generals, ignore_index=True)
+            if not specifics.empty and new_generals:
+                valid_gens = [df for df in new_generals if not df.empty]
+                if valid_gens:
+                    # Use object dtype to avoid FutureWarning during concat
+                    all_cols = specifics.columns
+                    for g in valid_gens:
+                        all_cols = all_cols.union(g.columns)
+                    objs = [specifics.reindex(columns=all_cols).astype(object)] + [g.reindex(columns=all_cols).astype(object) for g in valid_gens]
+                    group = pd.concat(objs, ignore_index=True)
+                    group = group.infer_objects()
+                else:
+                    group = specifics
+            elif not specifics.empty:
+                group = specifics
+            elif new_generals:
+                valid_gens = [df for df in new_generals if not df.empty]
+                if len(valid_gens) == 1:
+                    group = valid_gens[0]
+                elif valid_gens:
+                    # Use object dtype to avoid FutureWarning during concat
+                    all_cols = valid_gens[0].columns
+                    for g in valid_gens[1:]:
+                        all_cols = all_cols.union(g.columns)
+                    objs = [g.reindex(columns=all_cols).astype(object) for g in valid_gens]
+                    group = pd.concat(objs, ignore_index=True)
+                    group = group.infer_objects()
+                else:
+                    group = specifics
+            else:
+                group = specifics
             
         groups.append(group)
             
-    if not groups:
+    valid_groups = [g for g in groups if not g.empty]
+    if not valid_groups:
         return df.drop(columns=['temp_s'], errors='ignore')
         
-    result = pd.concat(groups, ignore_index=True)
+    if len(valid_groups) == 1:
+        result = valid_groups[0]
+    else:
+        # Use object dtype to avoid FutureWarning during concat
+        all_cols = valid_groups[0].columns
+        for g in valid_groups[1:]:
+            all_cols = all_cols.union(g.columns)
+        objs = [g.reindex(columns=all_cols).astype(object) for g in valid_groups]
+        result = pd.concat(objs, ignore_index=True)
+        result = result.infer_objects()
+        
     if 'temp_s' in result.columns:
         result = result.drop(columns=['temp_s'])
     return result
@@ -1210,15 +1250,19 @@ if not filtered_df.empty:
             nat_history = get_national_team_history_by_calendar_year(row['id'], matches_df_player)
             
             if is_goalkeeper:
-                if not gk_stats.empty:
+                if not gk_stats.empty and not nat_history.empty:
                     import pandas as _pd
-                    stats_to_display = _pd.concat([gk_stats, nat_history], ignore_index=True) if not nat_history.empty else gk_stats
+                    stats_to_display = _pd.concat([gk_stats, nat_history], ignore_index=True)
+                elif not gk_stats.empty:
+                    stats_to_display = gk_stats
                 else:
                     stats_to_display = nat_history
             else:
-                if not comp_stats.empty:
+                if not comp_stats.empty and not nat_history.empty:
                     import pandas as _pd
-                    stats_to_display = _pd.concat([comp_stats, nat_history], ignore_index=True) if not nat_history.empty else comp_stats
+                    stats_to_display = _pd.concat([comp_stats, nat_history], ignore_index=True)
+                elif not comp_stats.empty:
+                    stats_to_display = comp_stats
                 else:
                     stats_to_display = nat_history
             
@@ -1330,44 +1374,56 @@ if not filtered_df.empty:
                                             
                                         return s
 
-                            nt_df['season_group'] = nt_df.apply(normalize_nt_season, axis=1)
-                            
-                            # --- FIX DOUBLE COUNTING ---
-                            # Before aggregating, check if we have both SUMMARY rows (e.g. "National Team") 
-                            # and DETAILED rows (e.g. "WCQ") for the same season group.
-                            # Use shared helper (renaming season for compatibility)
-                            nt_df = nt_df.rename(columns={'season': 'original_season', 'season_group': 'season'})
-                            nt_df = clean_national_team_stats(nt_df)
-                            nt_df = nt_df.rename(columns={'season': 'season_group', 'original_season': 'season'})
-                            # ---------------------------
-                            
-                            # Group and Aggregate
-                            agg_funcs = {
-                                'games': 'sum',
-                                'games_starts': 'sum',
-                                'minutes': 'sum',
-                                'clean_sheets': 'sum',
-                                'goals_against': 'sum',
-                                'saves': 'sum',
-                                'shots_on_target_against': 'sum'
-                            }
-                            # Keep columns that exist in DataFrame
-                            available_funcs = {k: v for k,v in agg_funcs.items() if k in nt_df.columns}
-                            
-                            nt_grouped = nt_df.groupby('season_group').agg(available_funcs).reset_index()
-                            nt_grouped = nt_grouped.rename(columns={'season_group': 'season'})
-                            nt_grouped['competition_type'] = 'NATIONAL_TEAM'
-                            nt_grouped['competition_name'] = 'National Team'
-                            
-                            # Recalculate Save %
-                            if 'saves' in nt_grouped.columns and 'shots_on_target_against' in nt_grouped.columns:
-                                nt_grouped['save_percentage'] = nt_grouped.apply(
-                                    lambda x: (x['saves'] / x['shots_on_target_against'] * 100) if x['shots_on_target_against'] > 0 else 0.0, 
-                                    axis=1
-                                )
-                            
-                            # Recombine with Club stats
-                            gk_display = _pd.concat([club_df, nt_grouped], ignore_index=True)
+                                    nt_df['season_group'] = nt_df.apply(normalize_nt_season, axis=1)
+                                    
+                                    # --- FIX DOUBLE COUNTING ---
+                                    # Before aggregating, check if we have both SUMMARY rows (e.g. "National Team") 
+                                    # and DETAILED rows (e.g. "WCQ") for the same season group.
+                                    # Use shared helper (renaming season for compatibility)
+                                    nt_df = nt_df.rename(columns={'season': 'original_season', 'season_group': 'season'})
+                                    nt_df = clean_national_team_stats(nt_df)
+                                    nt_df = nt_df.rename(columns={'season': 'season_group', 'original_season': 'season'})
+                                    # ---------------------------
+                                    
+                                    # Group and Aggregate
+                                    agg_funcs = {
+                                        'games': 'sum',
+                                        'games_starts': 'sum',
+                                        'minutes': 'sum',
+                                        'clean_sheets': 'sum',
+                                        'goals_against': 'sum',
+                                        'saves': 'sum',
+                                        'shots_on_target_against': 'sum'
+                                    }
+                                    # Keep columns that exist in DataFrame
+                                    available_funcs = {k: v for k,v in agg_funcs.items() if k in nt_df.columns}
+                                    
+                                    nt_grouped = nt_df.groupby('season_group').agg(available_funcs).reset_index()
+                                    nt_grouped = nt_grouped.rename(columns={'season_group': 'season'})
+                                    nt_grouped['competition_type'] = 'NATIONAL_TEAM'
+                                    nt_grouped['competition_name'] = 'National Team'
+                                    
+                                    # Recalculate Save %
+                                    if 'saves' in nt_grouped.columns and 'shots_on_target_against' in nt_grouped.columns:
+                                        nt_grouped['save_percentage'] = nt_grouped.apply(
+                                            lambda x: (x['saves'] / x['shots_on_target_against'] * 100) if x['shots_on_target_against'] > 0 else 0.0, 
+                                            axis=1
+                                        )
+                                    
+                                    # Recombine with Club stats
+                                    if not club_df.empty and not nt_grouped.empty:
+                                        # Use object dtype to avoid FutureWarning during concat
+                                        all_cols = club_df.columns.union(nt_grouped.columns)
+                                        objs = [
+                                            club_df.reindex(columns=all_cols).astype(object),
+                                            nt_grouped.reindex(columns=all_cols).astype(object)
+                                        ]
+                                        gk_display = _pd.concat(objs, ignore_index=True)
+                                        gk_display = gk_display.infer_objects()
+                                    elif not nt_grouped.empty:
+                                        gk_display = nt_grouped
+                                    else:
+                                        gk_display = club_df
                                     
                             # Filter out potential summary rows (Season 'All', 'Career' etc.)
                             # We expect seasons to be years or ranges (2024, 2024-25). 

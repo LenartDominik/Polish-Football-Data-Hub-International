@@ -343,14 +343,55 @@ def clean_national_team_stats(df):
                     new_generals.append(pd.DataFrame([gen_row]))
             
             # Reconstruct group
-            group = pd.concat([specifics] + new_generals, ignore_index=True)
+            if not specifics.empty and new_generals:
+                valid_generals = [df for df in new_generals if not df.empty]
+                if valid_generals:
+                    # Ensure same columns and use object dtype to avoid FutureWarning
+                    objs = [specifics] + valid_generals
+                    all_cols = specifics.columns
+                    for obj in valid_generals:
+                        all_cols = all_cols.union(obj.columns)
+                    objs = [obj.reindex(columns=all_cols).astype(object) for obj in objs]
+                    group = pd.concat(objs, ignore_index=True)
+                    group = group.infer_objects()
+                else:
+                    group = specifics
+            elif not specifics.empty:
+                group = specifics
+            elif new_generals:
+                valid_generals = [df for df in new_generals if not df.empty]
+                if len(valid_generals) == 1:
+                    group = valid_generals[0]
+                elif valid_generals:
+                    # Ensure same columns and use object dtype to avoid FutureWarning
+                    all_cols = valid_generals[0].columns
+                    for obj in valid_generals[1:]:
+                        all_cols = all_cols.union(obj.columns)
+                    objs = [obj.reindex(columns=all_cols).astype(object) for obj in valid_generals]
+                    group = pd.concat(objs, ignore_index=True)
+                    group = group.infer_objects()
+                else:
+                    group = specifics # which is empty
+            else:
+                group = specifics # both empty
             
         groups.append(group)
             
-    if not groups:
+    valid_groups = [g for g in groups if not g.empty]
+    if not valid_groups:
         return df.drop(columns=['temp_s'], errors='ignore')
         
-    result = pd.concat(groups, ignore_index=True)
+    if len(valid_groups) == 1:
+        result = valid_groups[0]
+    else:
+        # Ensure same columns before concat and use object dtype to avoid FutureWarning
+        all_cols = valid_groups[0].columns
+        for g in valid_groups[1:]:
+            all_cols = all_cols.union(g.columns)
+        objs = [g.reindex(columns=all_cols).astype(object) for g in valid_groups]
+        result = pd.concat(objs, ignore_index=True)
+        result = result.infer_objects()
+        
     if 'temp_s' in result.columns:
         result = result.drop(columns=['temp_s'])
     return result
@@ -1594,14 +1635,30 @@ if not filtered_df.empty:
                     if comp_display.empty:
                         comp_display = comp_display_from_rows
                     else:
-                        if not comp_display_df.empty:
-                            comp_display = pd.concat([comp_display, comp_display_from_rows], ignore_index=True)
+                        if not comp_display_from_rows.empty:
+                            # Robust merge for comp_display
+                            all_cols = comp_display.columns.union(comp_display_from_rows.columns)
+                            objs = [
+                                comp_display.reindex(columns=all_cols).astype(object),
+                                comp_display_from_rows.reindex(columns=all_cols).astype(object)
+                            ]
+                            comp_display = pd.concat(objs, ignore_index=True)
 
                 # 2. Bezpieczne łączenie (Fix na FutureWarning)
                 dfs_to_concat = [df for df in [gk_display, comp_display] if not df.empty]
                 
                 if dfs_to_concat:
-                    season_display = pd.concat(dfs_to_concat, ignore_index=True)
+                    if len(dfs_to_concat) == 1:
+                        season_display = dfs_to_concat[0]
+                    else:
+                        # Ensure same columns before concat and use object dtype to avoid FutureWarning
+                        all_cols = dfs_to_concat[0].columns
+                        for df in dfs_to_concat[1:]:
+                            all_cols = all_cols.union(df.columns)
+                        objs = [df.reindex(columns=all_cols).astype(object) for df in dfs_to_concat]
+                        season_display = pd.concat(objs, ignore_index=True)
+                        # Optional: convert back to more specific dtypes
+                        season_display = season_display.infer_objects()
                 else:
                     season_display = pd.DataFrame()
 
@@ -1673,7 +1730,19 @@ if not filtered_df.empty:
                                     axis=1
                                 )
                             
-                            gk_display = pd.concat([club_df, nt_grouped], ignore_index=True)
+                            if not club_df.empty and not nt_grouped.empty:
+                                # Ensure same columns and use object dtype to avoid FutureWarning
+                                all_cols = club_df.columns.union(nt_grouped.columns)
+                                objs = [
+                                    club_df.reindex(columns=all_cols).astype(object),
+                                    nt_grouped.reindex(columns=all_cols).astype(object)
+                                ]
+                                gk_display = pd.concat(objs, ignore_index=True)
+                                gk_display = gk_display.infer_objects()
+                            elif not nt_grouped.empty:
+                                gk_display = nt_grouped
+                            else:
+                                gk_display = club_df
                             
                              # Filter out potential summary rows (Season 'All', 'Career' etc.)
                             gk_display = gk_display[gk_display['season'].astype(str).str.contains(r'\d', regex=True)]
@@ -1781,10 +1850,19 @@ if not filtered_df.empty:
                             # Grupujemy i łączymy
                             if final_agg_rules and not nt_df.empty:
                                 nt_agg = nt_df.groupby('season', as_index=False).agg(final_agg_rules)
-                                if club_df.empty:
+                                if not club_df.empty and not nt_agg.empty:
+                                    # Ensure same columns and use object dtype to avoid FutureWarning
+                                    all_cols = club_df.columns.union(nt_agg.columns)
+                                    objs = [
+                                        club_df.reindex(columns=all_cols).astype(object),
+                                        nt_agg.reindex(columns=all_cols).astype(object)
+                                    ]
+                                    season_display = pd.concat(objs, ignore_index=True)
+                                    season_display = season_display.infer_objects()
+                                elif not nt_agg.empty:
                                     season_display = nt_agg
                                 else:
-                                    season_display = pd.concat([club_df, nt_agg], ignore_index=True)
+                                    season_display = club_df
 
                     # 5. Formatowanie nazwy sezonu (np. 2025-2026 -> 2025/26)
                     def format_season(row):
