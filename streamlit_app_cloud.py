@@ -1301,7 +1301,9 @@ if not filtered_df.empty:
                 # IMPORTANT: RECREATING THE DATAFRAME LOGIC TO ENSURE IT WORKS
                 if is_goalkeeper:
                     import pandas as _pd
+                    # Standardized columns for all goalkeepers (ordered exactly as requested)
                     gk_cols = ['season', 'competition_type', 'competition_name', 'games', 'games_starts', 'minutes', 'clean_sheets', 'goals_against', 'save_percentage']
+                    
                     if not gk_stats.empty:
                         gk_display = gk_stats.reindex(columns=gk_cols).copy()
                     else:
@@ -1430,6 +1432,8 @@ if not filtered_df.empty:
                                 club_df_clean = club_df.copy()
                                 nt_grouped_clean = nt_grouped.copy()
                                 
+                                # Use position-based is_goalkeeper for consistent layout
+                                
                                 objs = [df for df in [club_df_clean, nt_grouped_clean] if not df.empty]
                                 if objs:
                                     # Use object dtype to avoid FutureWarning during concat
@@ -1539,7 +1543,26 @@ if not filtered_df.empty:
                             season_display[col] = season_display[col].apply(lambda x: round(x, 2) if pd.notna(x) else 0.0)
 
                     # 3. Rename columns for display
-                    # ... (renaming logic) ...
+                    if is_goalkeeper:
+                        # Ordered exactly as requested
+                        expected_gk_cols = ['season', 'competition_type', 'competition_name', 'games', 'games_starts', 'minutes', 'clean_sheets', 'goals_against', 'save_percentage']
+                        
+                        for col in expected_gk_cols:
+                            if col not in season_display.columns:
+                                season_display[col] = 0
+                                
+                        season_display = season_display[expected_gk_cols]
+                        season_display.columns = ['Season', 'Type', 'Competition', 'Games', 'Starts', 'Minutes', 'CS', 'GA', 'Save%']
+                    else:
+                        # Field player columns
+                        expected_field_cols = ['season', 'competition_type', 'competition_name', 'games', 'goals', 'assists', 'xg', 'xa', 'yellow_cards', 'red_cards', 'minutes']
+                        
+                        for col in expected_field_cols:
+                            if col not in season_display.columns:
+                                season_display[col] = 0
+                                
+                        season_display = season_display[expected_field_cols]
+                        season_display.columns = ['Season', 'Type', 'Competition', 'Games', 'Goals', 'Assists', 'xG', 'xA', 'Yellow', 'Red', 'Minutes']
                     
                     # --- CLUB WORLD CUP LABELING (history table) ---
                     if 'competition_name' in season_display.columns:

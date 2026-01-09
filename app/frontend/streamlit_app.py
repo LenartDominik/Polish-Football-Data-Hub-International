@@ -1576,7 +1576,7 @@ if not filtered_df.empty:
                 comp_display = pd.DataFrame()
 
                 if is_goalkeeper:
-                    # Standardized columns for all goalkeepers
+                    # Standardized columns for all goalkeepers (ordered exactly as requested)
                     gk_cols = ['season', 'competition_type', 'competition_name', 'games', 'games_starts', 'minutes', 'clean_sheets', 'goals_against', 'save_percentage']
                     
                     if not gk_stats.empty:
@@ -1814,8 +1814,7 @@ if not filtered_df.empty:
                             if col not in season_display.columns:
                                 season_display[col] = 0
 
-                    # Sprawdzenie typu gracza (Bramkarz vs Gracz z pola) na podstawie kolumn
-                    is_goalkeeper = 'save_percentage' in season_display.columns and season_display['save_percentage'].sum() > 0
+                    # Typ gracza (Bramkarz vs Gracz z pola) ustalony wcześniej na podstawie pozycji (is_goalkeeper)
 
                     # 4. Agregacja Reprezentacji (National Team)
                     if 'competition_type' in season_display.columns:
@@ -2033,15 +2032,17 @@ if not filtered_df.empty:
                     if 'save_percentage' in season_display.columns:
                         season_display['save_percentage'] = season_display['save_percentage'].apply(lambda x: round(x, 1) if pd.notna(x) else 0.0)
                     
-                    if is_goalkeeper and not gk_stats.empty:
-                        # Oczekujemy 9 kolumn dla bramkarza
+                    if is_goalkeeper:
+                        # Oczekujemy 9 kolumn dla bramkarza (ordered exactly as requested)
                         expected_gk_cols = ['season', 'competition_type', 'competition_name', 'games', 'games_starts', 'minutes', 'clean_sheets', 'goals_against', 'save_percentage']
-                        # Jeśli mamy tyle kolumn ile trzeba (9), zmieniamy nazwy
-                        if len(season_display.columns) == len(expected_gk_cols):
-                             season_display.columns = ['Season', 'Type', 'Competition', 'Games', 'Starts', 'Minutes', 'CS', 'GA', 'Save%']
-                        else:
-                             # Fallback: Nie zmieniaj nazw, jeśli liczba się nie zgadza, by nie wywalić apki
-                             pass 
+                        
+                        # Reorder columns to ensure exact sequence: season, type, name, games, starts, minutes, cs, ga, save%
+                        for col in expected_gk_cols:
+                            if col not in season_display.columns:
+                                season_display[col] = 0
+                        
+                        season_display = season_display[expected_gk_cols]
+                        season_display.columns = ['Season', 'Type', 'Competition', 'Games', 'Starts', 'Minutes', 'CS', 'GA', 'Save%']
 
                     else:
                         # Oczekujemy 11 kolumn dla gracza z pola
