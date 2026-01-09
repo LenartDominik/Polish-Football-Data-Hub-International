@@ -294,7 +294,7 @@ def send_matchlogs_notification_email(synced: int, failed: int, total: int, tota
     </ul>
     {failed_list_html}
     <hr>
-    <p><small>Wysłano z Polish Football Data Hub (Render + Resend)</small></p>
+    <p><small>Wysłano z Polish Football Players Abroad (Render + Resend)</small></p>
     """
     
     print(f"📧 Próba wysyłki z: {settings.email_from} do: {settings.email_to}") # Logowanie dla pewności
@@ -341,7 +341,7 @@ def send_sync_notification_email(synced: int, failed: int, total: int, duration_
         </ul>
         {failed_list_html}
         <hr>
-        <p><small>Powiadomienie z Polish Football Data Hub</small></p>
+        <p><small>Powiadomienie z Polish Football Players Abroad</small></p>
         """
 
         resend.Emails.send({
@@ -810,9 +810,9 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Scheduler zatrzymany")
 
 app = FastAPI(
-    title="Polish Football Data Hub International - API",
+    title="Polish Football Players Abroad - API",
     description="""
-    🇵🇱 **Polish Football Data Hub International API** - Real-time monitoring of 90+ Polish footballers playing abroad.
+    🇵🇱 **Polish Football Players Abroad API** - Real-time monitoring of 90+ Polish footballers playing abroad.
     
     ## 📊 Data Source & Attribution
     
@@ -866,7 +866,7 @@ app = FastAPI(
     
     - **Swagger UI**: Interactive API testing (you're viewing it now!)
     - **ReDoc**: Alternative documentation at `/redoc`
-    - **GitHub**: [Full Documentation](https://github.com/LenartDominik/Polish-Football-Data-Hub-International)
+    - **GitHub**: [Full Documentation](https://github.com/LenartDominik/Polish-Football-Players-Abroad)
     
     ## 🔄 Automated Data Sync
     
@@ -878,12 +878,12 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     contact={
-        "name": "Polish-Football-Data-Hub-International",
-        "url": "https://github.com/LenartDominik/Polish-Football-Data-Hub-International",
+        "name": "Polish Football Players Abroad",
+        "url": "https://github.com/LenartDominik/Polish-Football-Players-Abroad",
     },
     license_info={
         "name": "Educational Use Only (Non-Commercial)",
-        "url": "https://github.com/LenartDominik/Polish-Football-Data-Hub-International/blob/master/LEGAL_NOTICE.md",
+        "url": "https://github.com/LenartDominik/Polish-Football-Players-Abroad/blob/master/LEGAL_NOTICE.md",
     },
 )
 
@@ -956,7 +956,7 @@ def root():
     Returns basic information about the API and available endpoints.
     """
     return {
-        "message": "🇵🇱 Welcome to Polish Football Data Hub International API",
+        "message": "🇵🇱 Welcome to Polish Football Players Abroad API",
         "status": "operational",
         "data_source": {
             "name": "FBref.com",
@@ -992,7 +992,7 @@ def root():
             "next_matchlogs_sync": str(scheduler.get_job('sync_matchlogs').next_run_time) if scheduler and scheduler.running else "Scheduler disabled"
         },
         "links": {
-            "github": "https://github.com/LenartDominik/Polish-Football-Data-Hub-International",
+            "github": "https://github.com/LenartDominik/Polish-Football-Players-Abroad",
             "fbref": "https://fbref.com",
             "legal_notice": "See LEGAL_NOTICE.md - Educational use only",
             "license": "Educational Use Only (Non-Commercial)",
@@ -1003,7 +1003,7 @@ def root():
             "usage": "Educational and portfolio purposes ONLY",
             "commercial_use": "NOT allowed without FBref license",
             "data_attribution": "All statistics © FBref.com (Sports Reference LLC)",
-            "full_terms": "https://github.com/LenartDominik/Polish-Football-Data-Hub-International/blob/main/LEGAL_NOTICE.md"
+            "full_terms": "https://github.com/LenartDominik/Polish-Football-Players-Abroad/blob/main/LEGAL_NOTICE.md"
         },
     "database":  {
         "type": "PostgreSQL",

@@ -1,4 +1,4 @@
-# Polish Football Data Hub International - Backend API
+# Polish Football Players Abroad - Backend API
 
 ****Status:** ✅ Production Ready
 
@@ -11,7 +11,7 @@
 - **NOT for commercial use** without proper licensing
 - **See:** [LEGAL_NOTICE.md](../../LEGAL_NOTICE.md) in root directory
 
-# Polish Football Data Hub International - Backend API
+# Polish Football Players Abroad - Backend API
 
 FastAPI backend do zarządzania danymi polskich piłkarzy grających za granicą. Automatyczna synchronizacja danych z FBref.com przez Playwright scraper.
 

@@ -1,4 +1,4 @@
-# 🔧 Troubleshooting Guide - Polish Football Data Hub International
+# 🔧 Troubleshooting Guide - Polish Football Players Abroad
 
 **Common issues and solutions for deployment, configuration, and usage.**
 
@@ -411,7 +411,7 @@ curl https://your-backend.onrender.com/api/players/1
 
 1. **Check deployment guide:** [DEPLOYMENT.md](DEPLOYMENT.md)
 2. **Review API docs:** `https://your-backend.onrender.com/docs`
-3. **Check GitHub Issues:** https://github.com/LenartDominik/Polish-Football-Data-Hub-International/issues
+3. **Check GitHub Issues:** https://github.com/LenartDominik/Polish-Football-Players-Abroad/issues
 4. **Create new issue** with:
    - Error message
    - Steps to reproduce

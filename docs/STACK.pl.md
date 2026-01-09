@@ -1,4 +1,4 @@
-# 🛠️ Stack Technologiczny - Polish Football Data Hub International
+# 🛠️ Stack Technologiczny - Polish Football Players Abroad
 
 ## 📋 Overview
 

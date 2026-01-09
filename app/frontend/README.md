@@ -1,4 +1,4 @@
-# Polish Football Data Hub International - Frontend
+# Polish Football Players Abroad - Frontend
 
 ****Status:** ✅ Production Ready
 

@@ -187,11 +187,12 @@ def clean_national_team_stats(df):
                 valid_gens = [df for df in new_generals if not df.empty]
                 if valid_gens:
                     # Use object dtype to avoid FutureWarning during concat
-                    all_cols = specifics.columns
-                    for g in valid_gens:
-                        all_cols = all_cols.union(g.columns)
-                    objs = [specifics.reindex(columns=all_cols).astype(object)] + [g.reindex(columns=all_cols).astype(object) for g in valid_gens]
-                    group = pd.concat(objs, ignore_index=True)
+                    objs = [specifics] + valid_gens
+                    all_cols = pd.Index([])
+                    for o in objs: 
+                        all_cols = all_cols.union(o.columns)
+                    objs_reindexed = [o.reindex(columns=all_cols).astype(object) for o in objs]
+                    group = pd.concat(objs_reindexed, ignore_index=True)
                     group = group.infer_objects()
                 else:
                     group = specifics
@@ -203,11 +204,11 @@ def clean_national_team_stats(df):
                     group = valid_gens[0]
                 elif valid_gens:
                     # Use object dtype to avoid FutureWarning during concat
-                    all_cols = valid_gens[0].columns
-                    for g in valid_gens[1:]:
+                    all_cols = pd.Index([])
+                    for g in valid_gens: 
                         all_cols = all_cols.union(g.columns)
-                    objs = [g.reindex(columns=all_cols).astype(object) for g in valid_gens]
-                    group = pd.concat(objs, ignore_index=True)
+                    objs_reindexed = [g.reindex(columns=all_cols).astype(object) for g in valid_gens]
+                    group = pd.concat(objs_reindexed, ignore_index=True)
                     group = group.infer_objects()
                 else:
                     group = specifics
@@ -224,11 +225,11 @@ def clean_national_team_stats(df):
         result = valid_groups[0]
     else:
         # Use object dtype to avoid FutureWarning during concat
-        all_cols = valid_groups[0].columns
-        for g in valid_groups[1:]:
+        all_cols = pd.Index([])
+        for g in valid_groups: 
             all_cols = all_cols.union(g.columns)
-        objs = [g.reindex(columns=all_cols).astype(object) for g in valid_groups]
-        result = pd.concat(objs, ignore_index=True)
+        objs_reindexed = [g.reindex(columns=all_cols).astype(object) for g in valid_groups]
+        result = pd.concat(objs_reindexed, ignore_index=True)
         result = result.infer_objects()
         
     if 'temp_s' in result.columns:
@@ -443,10 +444,26 @@ def get_season_total_stats_by_date_range(
 
 # Page config
 st.set_page_config(
-    page_title="Polish Football Data Hub International",
+    page_title="Polish Football Players Abroad - Stats & Analytics",
     page_icon="⚽",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/LenartDominik/Polish-Football-Players-Abroad',
+        'About': "# Polish Football Players Abroad\nTrack and compare statistics of Polish football players playing in leagues worldwide."
+    }
+)
+
+# SEO Meta Tags Injection
+st.markdown(
+    """
+    <head>
+        <meta name="description" content="Detailed statistics and analytics for Polish football players playing abroad. Compare performance across leagues worldwide, including top European divisions and MLS.">
+        <meta name="keywords" content="Polish football abroad, Polacy za granicą, football stats, Polish players tracker, Lewandowski, Zieliński, football analytics">
+        <meta name="author" content="Polish Football Players Abroad">
+    </head>
+    """,
+    unsafe_allow_html=True
 )
 
 # Ukrywanie domyślnych elementów
@@ -462,7 +479,7 @@ st.markdown("""
 # Centered app title at the top
 st.markdown(
     """
-    <h1 style='text-align: center; margin-bottom: 0.5em;'>Polish Football Data Hub International</h1>
+    <h1 style='text-align: center; margin-bottom: 0.5em;'>Polish Football Players Abroad - Stats Tracker</h1>
     """,
     unsafe_allow_html=True
 )
@@ -582,7 +599,7 @@ if not search_name and selected_team == 'All' and selected_player_str == 'All':
             Player statistics powered by FBref - The leading source for football statistics
         </p>
         <p style='font-size: 0.7rem; color: #6A6A6A; margin-bottom: 0;'>
-            Polish Football Data Hub International is an independent project and is not affiliated with FBref.com
+            Polish Football Players Abroad is an independent project and is not affiliated with FBref.com
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -1253,14 +1270,24 @@ if not filtered_df.empty:
                 objs = [df for df in [gk_stats, nat_history] if not df.empty]
                 if objs:
                     import pandas as _pd
-                    stats_to_display = _pd.concat(objs, ignore_index=True)
+                    # Safe Concat
+                    all_cols = pd.Index([])
+                    for o in objs: all_cols = all_cols.union(o.columns)
+                    objs_reindexed = [o.reindex(columns=all_cols).astype(object) for o in objs]
+                    stats_to_display = _pd.concat(objs_reindexed, ignore_index=True)
+                    stats_to_display = stats_to_display.infer_objects()
                 else:
                     stats_to_display = _pd.DataFrame()
             else:
                 objs = [df for df in [comp_stats, nat_history] if not df.empty]
                 if objs:
                     import pandas as _pd
-                    stats_to_display = _pd.concat(objs, ignore_index=True)
+                    # Safe Concat
+                    all_cols = pd.Index([])
+                    for o in objs: all_cols = all_cols.union(o.columns)
+                    objs_reindexed = [o.reindex(columns=all_cols).astype(object) for o in objs]
+                    stats_to_display = _pd.concat(objs_reindexed, ignore_index=True)
+                    stats_to_display = stats_to_display.infer_objects()
                 else:
                     stats_to_display = _pd.DataFrame()
             
@@ -1338,7 +1365,12 @@ if not filtered_df.empty:
                                 # Ensure both have same columns for clean concat
                                 objs = [df for df in [gk_display, comp_display_df] if not df.empty]
                                 if objs:
-                                    gk_display = _pd.concat(objs, ignore_index=True)
+                                    all_cols = pd.Index([])
+                                    for o in objs: 
+                                        all_cols = all_cols.union(o.columns)
+                                    objs_reindexed = [o.reindex(columns=all_cols).astype(object) for o in objs]
+                                    gk_display = _pd.concat(objs_reindexed, ignore_index=True)
+                                    gk_display = gk_display.infer_objects()
                             
                         # --- AGGREGATION: GROUP NATIONAL TEAM STATS FOR GK ---
                         # Logic: Filter NT rows and group by season (normalizing WCQ 2026 -> 2025)

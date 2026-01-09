@@ -28,10 +28,18 @@ API_BASE_URL = get_api_base_url()
 API_URL = f"{API_BASE_URL}/api"
 
 
-st.set_page_config(page_title="Compare players", page_icon="⚖️", layout="wide")
+st.set_page_config(
+    page_title="Compare Polish Players Abroad - Stats & Analytics",
+    page_icon="⚖️",
+    layout="wide",
+    menu_items={
+        'Get Help': 'https://github.com/LenartDominik/Polish-Football-Players-Abroad',
+        'About': "# Polish Football Players Abroad\nCompare statistics of Polish football players playing in leagues worldwide."
+    }
+)
 
-st.markdown("<h1 style='text-align: center;'>⚖️ Comparison of Polish football players abroad</h1>", unsafe_allow_html=True)
-st.markdown("<h3 style='text-align: center; color: white;'>(league stats)</h3>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>⚖️ Compare Polish Football Players Abroad</h1>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center; color: #8A8A8A;'>Detailed League Statistics Comparison</h3>", unsafe_allow_html=True)
 
 # Fetching the list of players
 @st.cache_data(ttl=600, show_spinner=False)
@@ -394,7 +402,7 @@ st.markdown("""
         Player statistics powered by FBref - The leading source for football statistics
     </p>
     <p style='font-size: 0.7rem; color: #6A6A6A; margin-bottom: 0;'>
-        Polish Football Data Hub International is an independent project and is not affiliated with FBref.com
+        Polish Football Players Abroad is an independent project and is not affiliated with FBref.com
     </p>
 </div>
 """, unsafe_allow_html=True)

@@ -71,7 +71,7 @@ Pełna lista zależności w `requirements.txt`.
 
 ## Disclaimer
 
-**Polish Football Data Hub International** is an independent, non-commercial project created for educational purposes and to showcase Polish football talent playing abroad.
+**Polish Football Players Abroad** is an independent, non-commercial project created for educational purposes and to showcase Polish football talent playing abroad.
 
 This application is **NOT** affiliated with, endorsed by, or connected to:
 - FBref.com or Sports Reference LLC

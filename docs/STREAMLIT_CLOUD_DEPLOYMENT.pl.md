@@ -2,7 +2,7 @@
 
 ## 🎯 Przegląd
 
-Ten przewodnik pokazuje jak wdrożyć **Polish Football Data Hub International** na Streamlit Cloud (frontend) + Render.com (backend).
+Ten przewodnik pokazuje jak wdrożyć **Polish Football Players Abroad** na Streamlit Cloud (frontend) + Render.com (backend).
 
 **Rezultat:**
 - 🌐 Publiczny URL: `https://yourapp.streamlit.app`

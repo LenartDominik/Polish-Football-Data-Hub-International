@@ -1,4 +1,4 @@
-# 📚 API Documentation - Polish Football Data Hub International
+# 📚 API Documentation - Polish Football Players Abroad
 
 **Base URL:** `http://localhost:8000` (local) or `https://your-backend.onrender.com` (production)  
 **Interactive Docs:** 
@@ -64,7 +64,7 @@ Get comprehensive API information including scheduler status, database info, and
 **Response:**
 ```json
 {
-  "title": "Polish Football Data Hub International - Backend API",
+  "title": "Polish Football Players Abroad - Backend API",
   "version": "0.7.4",
   "description": "Backend API for tracking Polish football players statistics from FBref",
   "features": [

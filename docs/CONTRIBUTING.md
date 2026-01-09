@@ -1,4 +1,4 @@
-# 🤝 Contributing to Polish Football Data Hub International
+# 🤝 Contributing to Polish Football Players Abroad
 
 Thank you for considering contributing! This project welcomes contributions from the community.
 
@@ -85,8 +85,8 @@ test: Add unit tests for player sync
 
 1. **Clone repository:**
    ```bash
-   git clone https://github.com/LenartDominik/Polish-Football-Data-Hub-International.git
-   cd Polish-Football-Data-Hub-International/polish-players-tracker
+   git clone https://github.com/LenartDominik/Polish-Football-Players-Abroad.git
+   cd Polish-Football-Players-Abroad/polish-players-tracker
    ```
 
 2. **Create virtual environment:**

@@ -1,4 +1,4 @@
-﻿"""Polish Players Tracker International - Streamlit Dashboard
+﻿"""Polish Football Players Abroad - Streamlit Dashboard
 A simple dashboard to browse and filter Polish football players data.
 Usage:
     streamlit run app/frontend/streamlit_app.py
@@ -485,16 +485,32 @@ st.markdown("""
 
 # Page config
 st.set_page_config(
-    page_title="Polish Football Data Hub International",
+    page_title="Polish Football Players Abroad - Stats & Analytics",
     page_icon="⚽",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/LenartDominik/Polish-Football-Players-Abroad',
+        'About': "# Polish Football Players Abroad\nTrack and compare statistics of Polish football players playing in leagues worldwide."
+    }
+)
+
+# SEO Meta Tags Injection
+st.markdown(
+    """
+    <head>
+        <meta name="description" content="Detailed statistics and analytics for Polish football players playing abroad. Compare performance across leagues worldwide, including top European divisions and MLS.">
+        <meta name="keywords" content="Polish football abroad, Polacy za granicą, football stats, Polish players tracker, Lewandowski, Zieliński, football analytics">
+        <meta name="author" content="Polish Football Players Abroad">
+    </head>
+    """,
+    unsafe_allow_html=True
 )
 
 # Centered app title at the top
 st.markdown(
     """
-    <h1 style='text-align: center; margin-bottom: 0.5em;'>Polish Football Data Hub International</h1>
+    <h1 style='text-align: center; margin-bottom: 0.5em;'>Polish Football Players Abroad - Stats Tracker</h1>
     """,
     unsafe_allow_html=True
 )
@@ -641,7 +657,7 @@ if not search_name and selected_team == 'All' and selected_player_str == 'All':
             Player statistics powered by FBref - The leading source for football statistics
         </p>
         <p style='font-size: 0.7rem; color: #6A6A6A; margin-bottom: 0;'>
-            Polish Football Data Hub International is an independent project and is not affiliated with FBref.com
+            Polish Football Players Abroad is an independent project and is not affiliated with FBref.com
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -2205,7 +2221,7 @@ st.markdown("""
         Player statistics powered by FBref - The leading source for football statistics
     </p>
     <p style='font-size: 0.7rem; color: #6A6A6A; margin-bottom: 0;'>
-        Polish Football Data Hub International is an independent project and is not affiliated with FBref.com
+        Polish Football Players Abroad is an independent project and is not affiliated with FBref.com
     </p>
 </div>
 """, unsafe_allow_html=True)

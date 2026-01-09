@@ -1,4 +1,4 @@
-# 🚀 Deployment Guide - Polish Football Data Hub International
+# 🚀 Deployment Guide - Polish Football Players Abroad
 
 **Complete guide for deploying the full stack application to production.**
 

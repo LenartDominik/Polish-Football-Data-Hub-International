@@ -1,4 +1,4 @@
-# 🇵🇱 Polish Football Data Hub International
+# 🇵🇱 Polish Football Players Abroad
 
 **Status:** ✅ Production Ready | **Baza danych:** PostgreSQL (Supabase) | **Deployment:** Cloud-Ready
 
@@ -21,7 +21,7 @@ Projekt demonstruje wykorzystanie **web scrapingu** do regularnego pobierania i 
 
 ## 🌐 Aplikacja Live
 
-**Wypróbuj teraz:** (https://polish-football-data-international-tracker.streamlit.app/)
+**Wypróbuj teraz:** (https://github.com/LenartDominik/Polish-Football-Players-Abroad)
 
 ### 📱 Jak korzystać:
 
@@ -70,7 +70,7 @@ All player statistics in this application are sourced from **[FBref.com](https:/
 - ✅ **Non-Commercial**: Educational/portfolio project
 - ✅ **Respectful Scraping**: Following best practices and Terms of Service
 
-**Disclaimer:** Polish Football Data Hub International is an independent project and is not affiliated with, endorsed by, or connected to FBref.com or Sports Reference LLC. For official statistics and in-depth analysis, please visit [FBref.com](https://fbref.com/).
+**Disclaimer:** Polish Football Players Abroad is an independent project and is not affiliated with, endorsed by, or connected to FBref.com or Sports Reference LLC. For official statistics and in-depth analysis, please visit [FBref.com](https://fbref.com/).
 
 ---
 

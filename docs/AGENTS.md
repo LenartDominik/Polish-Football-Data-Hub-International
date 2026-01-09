@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Krótki opis
-Ten plik dokumentuje agentów (automatyzowane procesy, worker-y, skrypty zaplanowane lub LLM‑driven tools) używanych w projekcie "Polish-Football-Data-Hub-International". Celem jest:
+Ten plik dokumentuje agentów (automatyzowane procesy, worker-y, skrypty zaplanowane lub LLM‑driven tools) używanych w projekcie "Polish-Football-Players-Abroad". Celem jest:
 - wyjaśnić cel każdego agenta,
 - określić uprawnienia i wymagane sekrety,
 - opisać bezpieczne działanie, testowanie i monitorowanie,

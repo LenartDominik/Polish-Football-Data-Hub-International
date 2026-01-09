@@ -1,4 +1,4 @@
-# 🇵🇱 Polish Football Data Hub International
+# 🇵🇱 Polish Football Players Abroad
 
 **Status:** ✅ Production Ready | **Database:** PostgreSQL (Supabase) | **Deployment:** Cloud-Ready
 
@@ -21,7 +21,7 @@ This project demonstrates the use of **web scraping** to regularly fetch and pro
 
 ## 🌐 Live Application
 
-**Try it now:** [https://polish-football-data-international-tracker.streamlit.app/](https://polish-football-data-international-tracker.streamlit.app/)
+**Try it now:** [https://github.com/LenartDominik/Polish-Football-Players-Abroad](https://github.com/LenartDominik/Polish-Football-Players-Abroad)
 
 ### 📱 How to Use:
 
@@ -49,7 +49,7 @@ This project demonstrates the use of **web scraping** to regularly fetch and pro
 - **NOT for commercial use** without proper licensing
 - **See [docs/LEGAL_NOTICE.md](docs/LEGAL_NOTICE.md) for full details**
 
-# 🇵🇱 Polish Football Data Hub International
+# 🇵🇱 Polish Football Players Abroad
 
 Modern system for monitoring Polish footballers playing abroad. Automatic statistics synchronization from FBref.com using Playwright, advanced data analysis, and interactive dashboard.
 
@@ -69,7 +69,7 @@ All player statistics in this application are sourced from **[FBref.com](https:/
 - ✅ **Non-Commercial**: Educational/portfolio project
 - ✅ **Respectful Scraping**: Following best practices and Terms of Service
 
-**Disclaimer:** Polish Football Data Hub International is an independent project and is not affiliated with, endorsed by, or connected to FBref.com or Sports Reference LLC. For official statistics and in-depth analysis, please visit [FBref.com](https://fbref.com/).
+**Disclaimer:** Polish Football Players Abroad is an independent project and is not affiliated with, endorsed by, or connected to FBref.com or Sports Reference LLC. For official statistics and in-depth analysis, please visit [FBref.com](https://fbref.com/).
 
 ---
 
@@ -585,7 +585,7 @@ All documentation is available in Polish with `.pl.md` extension (e.g., `README.
 ### 🔗 Quick Links
 
 **Live Application:**
-- 🌐 **[Try it now!](https://polish-football-data-international-tracker.streamlit.app/)** - Live demo
+- 🌐 **[Try it now!](https://github.com/LenartDominik/Polish-Football-Players-Abroad)** - Live demo
 
 **API Documentation (Local):**
 - 📊 **[Swagger UI](http://localhost:8000/docs)** - Interactive API testing

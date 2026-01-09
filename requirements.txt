@@ -1,5 +1,5 @@
 # ============================================================================
-# Backend FastAPI Requirements - Polish Football Data Hub
+# Backend FastAPI Requirements - Polish Football Players Abroad
 # ============================================================================
 # For Render deployment and local development
 # Last updated: 2024-12-04
