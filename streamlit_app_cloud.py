@@ -457,14 +457,14 @@ st.set_page_config(
 # SEO Meta Tags Injection
 st.markdown(
     """
-    <head>
+    <div style="display:none;">
         <!-- Google Search Console Verification -->
         <meta name="google-site-verification" content="0ZLLXAHagxMIf2Db4Dfh2PLJog9BGrhPIBmH51mi1dM" />
 
         <meta name="description" content="Detailed statistics and analytics for Polish football players playing abroad. Compare performance across leagues worldwide, including top European divisions and MLS.">
         <meta name="keywords" content="Polish football abroad, Polacy za granicą, football stats, Polish players tracker, Lewandowski, Zieliński, football analytics">
         <meta name="author" content="Polish Football Players Abroad">
-    </head>
+    </div>
     """,
     unsafe_allow_html=True
 )
