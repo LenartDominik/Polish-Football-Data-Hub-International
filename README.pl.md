@@ -21,7 +21,7 @@ Projekt demonstruje wykorzystanie **web scrapingu** do regularnego pobierania i 
 
 ## 🌐 Aplikacja Live
 
-**Wypróbuj teraz:** (https://github.com/LenartDominik/Polish-Football-Players-Abroad)
+**Wypróbuj teraz:** [https://polish-football-players-abroad-tracker.streamlit.app/](https://polish-football-players-abroad-tracker.streamlit.app/)
 
 ### 📱 Jak korzystać:
 

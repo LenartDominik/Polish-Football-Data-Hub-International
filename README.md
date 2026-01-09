@@ -21,7 +21,7 @@ This project demonstrates the use of **web scraping** to regularly fetch and pro
 
 ## 🌐 Live Application
 
-**Try it now:** [https://github.com/LenartDominik/Polish-Football-Players-Abroad](https://github.com/LenartDominik/Polish-Football-Players-Abroad)
+**Try it now:** [https://polish-football-players-abroad-tracker.streamlit.app/](https://polish-football-players-abroad-tracker.streamlit.app/)
 
 ### 📱 How to Use:
 
@@ -585,7 +585,7 @@ All documentation is available in Polish with `.pl.md` extension (e.g., `README.
 ### 🔗 Quick Links
 
 **Live Application:**
-- 🌐 **[Try it now!](https://github.com/LenartDominik/Polish-Football-Players-Abroad)** - Live demo
+- 🌐 **[Try it now!](https://polish-football-players-abroad-tracker.streamlit.app/)** - Live demo
 
 **API Documentation (Local):**
 - 📊 **[Swagger UI](http://localhost:8000/docs)** - Interactive API testing
